@@ -1,56 +1,233 @@
-# Welcome to your Expo app 👋
+# Freshly Frontend
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native mobile app built with Expo and Expo Router.
 
-## Get started
+---
 
-1. Install dependencies
+## Table of Contents
 
-   ```bash
-   npm install
-   ```
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [Environment Configuration](#environment-configuration)
+- [Project Structure](#project-structure)
+- [Available Scripts](#available-scripts)
+- [Code Quality](#code-quality)
+- [CI Pipeline](#ci-pipeline)
+- [Contribution Guidelines](#contribution-guidelines)
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## Tech Stack
 
-In the output, you'll find options to open the app in a
+| Layer | Technology |
+|---|---|
+| Framework | React Native 0.81 + Expo SDK 54 |
+| Routing | Expo Router v6 (file-based) |
+| Language | TypeScript (strict mode) |
+| Linting | ESLint + eslint-config-expo |
+| Formatting | Prettier |
+| CI | GitHub Actions |
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Prerequisites
 
-## Get a fresh project
+Make sure the following are installed before you begin:
 
-When you're ready, run:
+- **Node.js** 20+ — [nodejs.org](https://nodejs.org)
+- **npm** 10+ (comes with Node)
+- **Expo CLI** — installed automatically via `npx`
+- **iOS Simulator** (macOS only) — requires Xcode from the App Store
+- **Android Emulator** — requires [Android Studio](https://developer.android.com/studio)
 
-```bash
-npm run reset-project
+For physical device testing, install **Expo Go** from the App Store or Google Play.
+
+---
+
+## Getting Started
+
+### 1. Clone the repository
+
+```sh
+git clone <repo-url>
+cd freshly-frontend
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Install dependencies
 
-### Other setup steps
+```sh
+npm install
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### 3. Set up environment variables
 
-## Learn more
+```sh
+cp .env.example .env
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Fill in the values in `.env` (see [Environment Configuration](#environment-configuration)).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### 4. Start the development server
 
-## Join the community
+```sh
+npm start
+```
 
-Join our community of developers creating universal apps.
+Then press:
+- `i` to open the iOS simulator
+- `a` to open the Android emulator
+- `w` to open in the browser
+- Scan the QR code with Expo Go on a physical device
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## Environment Configuration
+
+Environment variables are loaded via Expo's built-in support. Variables must be prefixed with `EXPO_PUBLIC_` to be accessible in the app.
+
+| Variable | Description | Example |
+|---|---|---|
+| `EXPO_PUBLIC_API_URL` | Base URL for the backend API | `http://localhost:3000` |
+
+Create a `.env` file at the project root:
+
+```sh
+EXPO_PUBLIC_API_URL=http://localhost:3000
+```
+
+> `.env` is gitignored. Never commit secrets or API keys.
+
+For different environments (staging, production), use:
+
+```sh
+.env.development   # local dev
+.env.staging       # staging builds
+.env.production    # production builds
+```
+
+---
+
+
+## Available Scripts
+
+| Script | Command | Description |
+|---|---|---|
+| `start` | `npm start` | Start the Expo dev server |
+| `ios` | `npm run ios` | Start and open iOS simulator |
+| `android` | `npm run android` | Start and open Android emulator |
+| `web` | `npm run web` | Start and open in browser |
+| `lint` | `npm run lint` | Run ESLint + Prettier checks |
+| `format` | `npm run format` | Auto-format all source files |
+
+---
+
+## Code Quality
+
+### ESLint
+
+Configured with `eslint-config-expo` (flat config format). Runs automatically in CI.
+
+```sh
+npm run lint          # check for violations
+npm run lint -- --fix # auto-fix where possible
+```
+
+### Prettier
+
+Formatting rules in `.prettierrc`:
+
+```json
+{
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "tabWidth": 2
+}
+```
+
+```sh
+npm run format   # rewrite files to match rules
+npm run lint     # also catches formatting errors via eslint-plugin-prettier
+```
+
+### TypeScript
+
+Strict mode is enabled. Run a type check without emitting files:
+
+```sh
+npx tsc --noEmit
+```
+
+### VS Code (recommended setup)
+
+Install the following extensions:
+- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+
+Add to `.vscode/settings.json`:
+
+```json
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  }
+}
+```
+
+---
+
+## CI Pipeline
+
+GitHub Actions runs on every push and pull request to all branches.
+
+**Jobs:**
+
+| Step | What it checks |
+|---|---|
+| Type check | `tsc --noEmit` — TypeScript errors |
+| Lint | `npm run lint` — ESLint rules + Prettier violations |
+| Format check | `prettier --check` — unformatted files |
+
+The pipeline must pass before a PR can be merged.
+
+---
+
+## Contribution Guidelines
+
+### Branch naming
+
+```
+<type>/<ticket-id>-short-description
+
+feat/FRES-42-add-login-screen
+fix/FRES-99-fix-api-timeout
+chore/FRES-10-update-dependencies
+```
+
+Types: `feat`, `fix`, `chore`, `refactor`, `docs`
+
+### Commit messages
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <short description>
+
+feat(auth): add login screen
+fix(api): handle 401 response correctly
+chore(deps): update expo to SDK 55
+```
+
+### Pull request process
+
+1. Branch off from `main`
+2. Make your changes — keep PRs focused on a single concern
+3. Ensure `npm run lint` and `npx tsc --noEmit` pass locally before pushing
+4. Open a PR with a clear description of what changed and why
+5. Address review feedback
+6. Merge once approved and CI is green
+```
