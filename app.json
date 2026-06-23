@@ -31,6 +31,10 @@
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76
+          },
+          "ios": {
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 100
           }
         }
       ],
