@@ -50,10 +50,7 @@ export default function ProfileSetupScreen() {
       });
       router.replace('/');
     } catch (err: any) {
-      Alert.alert(
-        'Error',
-        err?.message ?? 'Failed to save profile. Please try again.',
-      );
+      Alert.alert('Error', err?.message ?? 'Failed to save profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -70,10 +67,7 @@ export default function ProfileSetupScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.avatarPlaceholder}>
@@ -82,9 +76,7 @@ export default function ProfileSetupScreen() {
             </Text>
           </View>
           <Text style={styles.title}>Set up your profile</Text>
-          <Text style={styles.subtitle}>
-            Help us personalise your Freshly experience
-          </Text>
+          <Text style={styles.subtitle}>Help us personalise your Freshly experience</Text>
         </View>
 
         {/* Form */}
@@ -105,9 +97,7 @@ export default function ProfileSetupScreen() {
               returnKeyType="next"
               editable={!loading}
             />
-            {errors.fullName ? (
-              <Text style={styles.errorText}>{errors.fullName}</Text>
-            ) : null}
+            {errors.fullName ? <Text style={styles.errorText}>{errors.fullName}</Text> : null}
           </View>
 
           {/* Phone */}
@@ -126,9 +116,7 @@ export default function ProfileSetupScreen() {
               returnKeyType="done"
               editable={!loading}
             />
-            {errors.phone ? (
-              <Text style={styles.errorText}>{errors.phone}</Text>
-            ) : null}
+            {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
           </View>
 
           {/* Address placeholder */}
@@ -164,11 +152,7 @@ export default function ProfileSetupScreen() {
           </TouchableOpacity>
 
           {/* Skip button */}
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={handleSkip}
-            disabled={loading}
-          >
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip} disabled={loading}>
             <Text style={styles.skipButtonText}>Skip for now</Text>
           </TouchableOpacity>
         </View>
