@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Platform, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
-import Validator from 'validatorjs';
-import { toast } from 'react-toastify';
+import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 
 import { authApi, tokenStorage } from '@/api';
 import type { ApiError } from '@/api';
+import { validateLoginForm } from '@/utils/authValidation';
+import { showToastError, showToastSuccess } from '@/utils/toast';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -13,51 +13,18 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const showError = (message: string) => {
+  const handleError = (message: string) => {
     setErrorMessage(message);
-
-    if (Platform.OS === 'web') {
-      toast.error(message);
-    }
-  };
-
-  const showSuccess = (message: string) => {
-    if (Platform.OS === 'web') {
-      toast.success(message);
-    }
-  };
-
-  const validateForm = () => {
-    const validation = new Validator(
-      {
-        email: email.trim(),
-        password,
-      },
-      {
-        email: 'required|email',
-        password: 'required|min:6',
-      },
-      {
-        'required.email': 'Email is required.',
-        'email.email': 'Please enter a valid email address.',
-        'required.password': 'Password is required.',
-        'min.password': 'Password must be at least 6 characters.',
-      },
-    );
-
-    if (validation.fails()) {
-      const firstError = validation.errors.first('email') || validation.errors.first('password');
-      showError(firstError || 'Please check your login information.');
-      return false;
-    }
-
-    return true;
+    showToastError(message);
   };
 
   const handleLogin = async () => {
     setErrorMessage('');
 
-    if (!validateForm()) {
+    const validationError = validateLoginForm(email, password);
+
+    if (validationError) {
+      handleError(validationError);
       return;
     }
 
@@ -72,11 +39,11 @@ export default function LoginScreen() {
       await tokenStorage.setAccessToken(response.accessToken);
       await tokenStorage.setRefreshToken(response.refreshToken);
 
-      showSuccess('Login successful.');
+      showToastSuccess('Login successful.');
       router.replace('/');
     } catch (error) {
       const apiError = error as ApiError;
-      showError(apiError.message || 'Login failed. Please try again.');
+      handleError(apiError.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -84,42 +51,38 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.kicker}>Welcome back</Text>
-        <Text style={styles.title}>Login</Text>
-        <Text style={styles.subtitle}>Sign in to continue managing your pantry.</Text>
+      <Text style={styles.title}>Login</Text>
 
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+      />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
 
-        <Pressable
-          style={[styles.button, loading && styles.disabledButton]}
-          disabled={loading}
-          onPress={handleLogin}
-        >
-          <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
-        </Pressable>
+      <Pressable
+        style={[styles.button, loading && styles.disabledButton]}
+        disabled={loading}
+        onPress={handleLogin}
+      >
+        <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
+      </Pressable>
 
-        <Pressable onPress={() => router.push('/register')}>
-          <Text style={styles.linkText}>Do not have an account? Register</Text>
-        </Pressable>
-      </View>
+      <Pressable onPress={() => router.push('/register')}>
+        <Text style={styles.linkText}>Do not have an account? Register</Text>
+      </Pressable>
     </View>
   );
 }
@@ -129,29 +92,10 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: 'center',
-    backgroundColor: '#F5F7F2',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  kicker: {
-    color: '#4CAF50',
-    fontWeight: '700',
-    marginBottom: 8,
   },
   title: {
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: '#666',
+    fontSize: 28,
+    fontWeight: '700',
     marginBottom: 24,
   },
   errorText: {
@@ -160,16 +104,15 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 14,
+    borderColor: '#ddd',
+    borderRadius: 10,
     padding: 14,
     marginBottom: 16,
-    backgroundColor: '#FAFAFA',
   },
   button: {
     backgroundColor: '#4CAF50',
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 12,
   },
   disabledButton: {
     opacity: 0.7,
@@ -177,12 +120,12 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     textAlign: 'center',
-    fontWeight: '700',
+    fontWeight: '600',
   },
   linkText: {
     textAlign: 'center',
-    marginTop: 18,
+    marginTop: 16,
     color: '#4CAF50',
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });
