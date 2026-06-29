@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
+import { Link } from 'expo-router';
 import { apiClient } from '@/api';
 import { ENV } from '@/config/env';
 
@@ -21,6 +22,10 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{status}</Text>
+      {/* DEV: preview profile setup screen */}
+      <Link href="/profile-setup" style={{ marginTop: 24, color: '#16A34A', fontSize: 15 }}>
+        Go to Profile Setup →
+      </Link>
     </View>
   );
 }

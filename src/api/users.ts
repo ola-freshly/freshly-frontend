@@ -4,18 +4,15 @@ import type { ApiResponse } from './types';
 export interface UserProfile {
   id: string;
   email: string;
-  full_name: string | null;
-  username: string | null;
-  bio: string | null;
-  avatar_url: string | null;
-  dietary_preferences: string[];
-  created_at: string;
-  updated_at: string;
+  name: string;
+  phone?: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface UpdateProfilePayload {
-  full_name?: string;
+  name?: string;
   phone?: string;
+  avatarUrl?: string | null;
 }
 
 export const usersApi = {
