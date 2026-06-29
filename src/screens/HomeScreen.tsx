@@ -5,7 +5,7 @@ import { apiClient } from '@/api';
 import { ENV } from '@/config/env';
 
 export default function HomeScreen() {
-  const [status, setStatus] = useState<String>('checking');
+  const [status, setStatus] = useState<string>('checking');
 
   useEffect(() => {
     const checkConnection = async () => {

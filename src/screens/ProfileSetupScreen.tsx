@@ -184,7 +184,9 @@ export default function ProfileSetupScreen() {
               />
             </View>
             {errors.fullName ? (
-              <Text style={{ fontSize: 12, color: '#EF4444', paddingLeft: 4 }}>{errors.fullName}</Text>
+              <Text style={{ fontSize: 12, color: '#EF4444', paddingLeft: 4 }}>
+                {errors.fullName}
+              </Text>
             ) : null}
           </View>
 
@@ -241,7 +243,13 @@ export default function ProfileSetupScreen() {
 
           {/* Address */}
           <View style={{ gap: 7 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>
                 Delivery address
               </Text>
