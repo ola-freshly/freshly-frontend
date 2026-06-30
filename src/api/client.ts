@@ -1,10 +1,10 @@
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { AxiosError, AxiosInstance, create, InternalAxiosRequestConfig } from 'axios';
 import { ENV } from '@/config/env';
 import { tokenStorage } from './tokenStorage';
 import { refreshAccessToken } from './refresh';
 import type { ApiError } from './types';
 
-const client: AxiosInstance = axios.create({
+const client: AxiosInstance = create({
   baseURL: ENV.API_BASE_URL,
   timeout: 10_000,
   headers: { 'Content-Type': 'application/json' },
