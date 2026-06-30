@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { ENV } from '@/config/env';
 import { tokenStorage } from './tokenStorage';
+import { refreshAccessToken } from './refresh';
 import type { ApiError } from './types';
 
 const client: AxiosInstance = axios.create({
@@ -25,24 +26,14 @@ client.interceptors.response.use(
     const status = error.response?.status;
 
     if (status === 401 && !error.config?.url?.includes('/auth/refresh')) {
-      // Token expired — attempt silent refresh
-      const refreshToken = await tokenStorage.getRefreshToken();
-      if (refreshToken) {
-        try {
-          const { data } = await axios.post<{ accessToken: string }>(
-            `${ENV.API_BASE_URL}/auth/refresh`,
-            { refreshToken },
-          );
-          await tokenStorage.setAccessToken(data.accessToken);
-
-          // Retry the original request with the new token
-          const originalRequest = error.config!;
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-          return client(originalRequest);
-        } catch {
-          await tokenStorage.clearTokens();
-          return Promise.reject<ApiError>({ message: 'Session expired', statusCode: 401 });
-        }
+      try {
+        const newToken = await refreshAccessToken();
+        const originalRequest = error.config!;
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return client(originalRequest);
+      } catch {
+        await tokenStorage.clearTokens();
+        return Promise.reject<ApiError>({ message: 'Session expired', statusCode: 401 });
       }
     }
 
