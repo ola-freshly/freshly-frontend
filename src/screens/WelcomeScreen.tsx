@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 
 export default function WelcomeScreen() {
   return (
@@ -13,7 +14,11 @@ export default function WelcomeScreen() {
         <Text style={styles.subtitle}>Your fresh start begins here</Text>
       </View>
 
-      <TouchableOpacity style={styles.button} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.button}
+        activeOpacity={0.8}
+        onPress={() => router.push('/(auth)/login')}
+      >
         <Text style={styles.buttonText}>Get Started</Text>
       </TouchableOpacity>
     </View>
