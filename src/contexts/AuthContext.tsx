@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { tokenStorage } from '@/api';
+import { tokenStorage, refreshAccessToken } from '@/api';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -27,20 +27,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const token = await tokenStorage.getAccessToken();
 
-      if (!token) {
-        setIsAuthenticated(false);
-        setIsLoading(false);
-        return;
+      if (token) {
+        const payload = decodeJwt(token);
+        if (payload && typeof payload.exp === 'number' && payload.exp * 1000 > Date.now()) {
+          setIsAuthenticated(true);
+          return;
+        }
       }
 
-      const payload = decodeJwt(token);
-
-      if (payload && typeof payload.exp === 'number' && payload.exp * 1000 > Date.now()) {
-        setIsAuthenticated(true);
-      } else {
-        await tokenStorage.clearTokens();
-        setIsAuthenticated(false);
+      const refreshToken = await tokenStorage.getRefreshToken();
+      if (refreshToken) {
+        try {
+          await refreshAccessToken();
+          setIsAuthenticated(true);
+          return;
+        } catch {
+          // refresh failed, fall through to logout
+        }
       }
+
+      await tokenStorage.clearTokens();
+      setIsAuthenticated(false);
     } catch {
       await tokenStorage.clearTokens();
       setIsAuthenticated(false);
