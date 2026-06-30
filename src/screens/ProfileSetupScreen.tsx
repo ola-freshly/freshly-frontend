@@ -21,7 +21,7 @@ const GREEN_DIM = '#DCFCE7';
 export default function ProfileSetupScreen() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
+  const [email, setEmail] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ fullName?: string; phone?: string }>({});
@@ -241,49 +241,41 @@ export default function ProfileSetupScreen() {
             ) : null}
           </View>
 
-          {/* Address */}
+          {/* Email */}
           <View style={{ gap: 7 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>
+              Email address <Text style={{ color: GREEN }}>*</Text>
+            </Text>
             <View
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>
-                Delivery address
-              </Text>
-              <Text style={{ fontSize: 11, color: '#B0B8C1' }}>Optional</Text>
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'flex-start',
-                minHeight: 80,
+                height: 52,
                 borderRadius: 14,
                 borderCurve: 'continuous',
                 borderWidth: 1.5,
                 paddingHorizontal: 14,
-                paddingTop: 14,
                 gap: 10,
-                ...fieldStyle('address'),
+                ...fieldStyle('email'),
               }}
             >
               <Image
-                source="sf:mappin"
-                style={{ width: 17, height: 17, marginTop: 1 }}
+                source="sf:envelope"
+                style={{ width: 17, height: 17 }}
                 tintColor="#9CA3AF"
                 contentFit="contain"
               />
               <TextInput
-                style={{ flex: 1, fontSize: 15, color: '#111827', paddingBottom: 14 }}
-                placeholder="Street, district, city..."
+                style={{ flex: 1, fontSize: 15, color: '#111827' }}
+                placeholder="you@example.com"
                 placeholderTextColor="#C4C9D4"
-                value={address}
-                onChangeText={setAddress}
-                onFocus={() => setFocused('address')}
+                value={email}
+                onChangeText={setEmail}
+                onFocus={() => setFocused('email')}
                 onBlur={() => setFocused(null)}
-                multiline
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
                 returnKeyType="done"
               />
             </View>

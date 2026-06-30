@@ -40,7 +40,7 @@ export default function LoginScreen() {
       await tokenStorage.setRefreshToken(response.refreshToken);
 
       showToastSuccess('Login successful.');
-      router.replace('/');
+      router.replace('/profile-setup');
     } catch (error) {
       const apiError = error as ApiError;
       handleError(apiError.message || 'Login failed. Please try again.');
