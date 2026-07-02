@@ -34,7 +34,7 @@ export default function LoginScreen() {
       const response = await authApi.login({ email: email.trim(), password });
       await login(response.accessToken, response.refreshToken);
       showToastSuccess('Login successful.');
-      router.replace('/(app)/profile-setup');
+      router.replace('/(app)/(tabs)/pantry');
     } catch (error) {
       const apiError = error as ApiError;
       handleError(apiError.message || 'Login failed. Please try again.');
