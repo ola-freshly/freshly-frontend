@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 
-import { authApi, tokenStorage } from '@/api';
+import { authApi } from '@/api';
 import type { ApiError } from '@/api';
 import { validateRegisterForm } from '@/utils/authValidation';
 import { showToastError, showToastSuccess } from '@/utils/toast';
@@ -33,17 +33,14 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
 
-      const response = await authApi.register({
+      await authApi.register({
         name: name.trim(),
         email: email.trim(),
         password,
       });
 
-      await tokenStorage.setAccessToken(response.accessToken);
-      await tokenStorage.setRefreshToken(response.refreshToken);
-
-      showToastSuccess('Account created successfully.');
-      router.replace('/');
+      showToastSuccess('Account created! Check your email to verify before logging in.');
+      router.replace('/login');
     } catch (error) {
       const apiError = error as ApiError;
       handleError(apiError.message || 'Registration failed. Please try again.');
