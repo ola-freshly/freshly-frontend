@@ -2,57 +2,39 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 
-import { authApi, tokenStorage } from '@/api';
+import { authApi } from '@/api';
 import type { ApiError } from '@/api';
+import { validateRegisterForm } from '@/utils/authValidation';
+import { showToastError, showToastSuccess } from '@/utils/toast';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const validateForm = () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setErrorMessage('Name, email, and password are required.');
-      return false;
-    }
-
-    if (!email.includes('@')) {
-      setErrorMessage('Please enter a valid email address.');
-      return false;
-    }
-
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters.');
-      return false;
-    }
-
-    return true;
+  const handleError = (message: string) => {
+    setErrorMessage(message);
+    showToastError(message);
   };
 
   const handleRegister = async () => {
     setErrorMessage('');
-
-    if (!validateForm()) {
+    const validationError = validateRegisterForm(name, email, password);
+    if (validationError) {
+      handleError(validationError);
       return;
     }
 
     try {
       setLoading(true);
-      const response = await authApi.register({
-        name: name.trim(),
-        email: email.trim(),
-        password,
-      });
-
-      await tokenStorage.setAccessToken(response.accessToken);
-
-      await tokenStorage.setRefreshToken(response.refreshToken);
+      await authApi.register({ name: name.trim(), email: email.trim(), password });
+      showToastSuccess('Account created! Check your email to verify before logging in.');
+      router.replace('/(auth)/login');
     } catch (error) {
       const apiError = error as ApiError;
-      setErrorMessage(apiError.message || 'Registration failed. Please try again.');
+      handleError(apiError.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -60,7 +42,7 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Register</Text>
+      <Text style={styles.title}>Create Account</Text>
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
@@ -91,7 +73,7 @@ export default function RegisterScreen() {
         <Text style={styles.buttonText}>{loading ? 'Creating account...' : 'Create Account'}</Text>
       </Pressable>
 
-      <Pressable onPress={() => router.push('/login')}>
+      <Pressable onPress={() => router.push('/(auth)/login')}>
         <Text style={styles.linkText}>Already have an account? Login</Text>
       </Pressable>
     </View>

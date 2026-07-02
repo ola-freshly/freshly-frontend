@@ -23,7 +23,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>{status}</Text>
       {/* DEV: preview profile setup screen */}
-      <Link href="/profile-setup" style={{ marginTop: 24, color: '#16A34A', fontSize: 15 }}>
+      <Link href="/(app)/profile-setup" style={{ marginTop: 24, color: '#16A34A', fontSize: 15 }}>
         Go to Profile Setup →
       </Link>
     </View>

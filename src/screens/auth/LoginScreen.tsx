@@ -1,11 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
 
-import { authApi, tokenStorage } from '@/api';
+import { authApi } from '@/api';
 import type { ApiError } from '@/api';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginScreen() {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -16,32 +18,22 @@ export default function LoginScreen() {
       setErrorMessage('Email and password are required.');
       return false;
     }
-
     if (!email.includes('@')) {
       setErrorMessage('Please enter a valid email address.');
       return false;
     }
-
     return true;
   };
 
   const handleLogin = async () => {
     setErrorMessage('');
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
-      const response = await authApi.login({
-        email: email.trim(),
-        password,
-      });
-
-      await tokenStorage.setAccessToken(response.accessToken);
-
-      await tokenStorage.setRefreshToken(response.refreshToken);
+      const response = await authApi.login({ email: email.trim(), password });
+      await login(response.accessToken, response.refreshToken);
+      router.replace('/(app)/(tabs)/pantry');
     } catch (error) {
       const apiError = error as ApiError;
       setErrorMessage(apiError.message || 'Login failed. Please try again.');
@@ -52,7 +44,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Freshly</Text>
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
@@ -78,12 +70,16 @@ export default function LoginScreen() {
         disabled={loading}
         onPress={handleLogin}
       >
-        <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
+        <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Log in'}</Text>
       </Pressable>
 
-      <Pressable onPress={() => router.push('/register')}>
-        <Text style={styles.linkText}>Do not have an account? Register</Text>
-      </Pressable>
+      <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+        <Text style={styles.link}>Create an account</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
+        <Text style={styles.link}>Forgot password?</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -91,42 +87,46 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
     justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    padding: 24,
+    backgroundColor: '#fff',
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
     marginBottom: 24,
   },
   errorText: {
     color: '#D32F2F',
-    marginBottom: 12,
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 10,
     padding: 14,
-    marginBottom: 16,
+    width: '100%',
   },
   button: {
-    backgroundColor: '#4CAF50',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#208AEF',
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
   },
   disabledButton: {
     opacity: 0.7,
   },
   buttonText: {
     color: '#fff',
-    textAlign: 'center',
     fontWeight: '600',
+    fontSize: 16,
   },
-  linkText: {
-    textAlign: 'center',
-    marginTop: 16,
-    color: '#4CAF50',
-    fontWeight: '600',
+  link: {
+    color: '#208AEF',
+    fontSize: 14,
   },
 });

@@ -48,7 +48,7 @@ export default function ProfileSetupScreen() {
         name: fullName.trim(),
         ...(phone.trim() && { phone: phone.trim() }),
       });
-      router.replace('/');
+      router.replace('/(app)/(tabs)/pantry');
     } catch (err: any) {
       Alert.alert('Error', err?.message ?? 'Failed to save profile. Please try again.');
     } finally {
@@ -67,7 +67,7 @@ export default function ProfileSetupScreen() {
           headerBackButtonDisplayMode: 'minimal',
           headerRight: () => (
             <Pressable
-              onPress={() => router.replace('/')}
+              onPress={() => router.replace('/(app)/(tabs)/pantry')}
               hitSlop={10}
               style={({ pressed }) => ({ opacity: pressed ? 0.45 : 1 })}
             >
