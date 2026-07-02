@@ -21,6 +21,7 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     setErrorMessage('');
+
     const validationError = validateRegisterForm(name, email, password);
     if (validationError) {
       handleError(validationError);
@@ -42,7 +43,7 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
+      <Text style={styles.title}>Register</Text>
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 

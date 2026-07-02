@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 
 import { authApi } from '@/api';
 import type { ApiError } from '@/api';
 import { useAuth } from '@/context/AuthContext';
+import { validateLoginForm } from '@/utils/authValidation';
+import { showToastError, showToastSuccess } from '@/utils/toast';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -13,30 +15,29 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const validateForm = () => {
-    if (!email.trim() || !password.trim()) {
-      setErrorMessage('Email and password are required.');
-      return false;
-    }
-    if (!email.includes('@')) {
-      setErrorMessage('Please enter a valid email address.');
-      return false;
-    }
-    return true;
+  const handleError = (message: string) => {
+    setErrorMessage(message);
+    showToastError(message);
   };
 
   const handleLogin = async () => {
     setErrorMessage('');
-    if (!validateForm()) return;
+
+    const validationError = validateLoginForm(email, password);
+    if (validationError) {
+      handleError(validationError);
+      return;
+    }
 
     try {
       setLoading(true);
       const response = await authApi.login({ email: email.trim(), password });
       await login(response.accessToken, response.refreshToken);
-      router.replace('/(app)/(tabs)/pantry');
+      showToastSuccess('Login successful.');
+      router.replace('/(app)/profile-setup');
     } catch (error) {
       const apiError = error as ApiError;
-      setErrorMessage(apiError.message || 'Login failed. Please try again.');
+      handleError(apiError.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -44,7 +45,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Freshly</Text>
+      <Text style={styles.title}>Login</Text>
 
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
@@ -70,16 +71,12 @@ export default function LoginScreen() {
         disabled={loading}
         onPress={handleLogin}
       >
-        <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Log in'}</Text>
+        <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
       </Pressable>
 
-      <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-        <Text style={styles.link}>Create an account</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
-        <Text style={styles.link}>Forgot password?</Text>
-      </TouchableOpacity>
+      <Pressable onPress={() => router.push('/(auth)/register')}>
+        <Text style={styles.linkText}>Do not have an account? Register</Text>
+      </Pressable>
     </View>
   );
 }
@@ -87,46 +84,42 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
     padding: 24,
-    backgroundColor: '#fff',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     marginBottom: 24,
   },
   errorText: {
     color: '#D32F2F',
-    textAlign: 'center',
+    marginBottom: 12,
   },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 10,
     padding: 14,
-    width: '100%',
+    marginBottom: 16,
   },
   button: {
-    backgroundColor: '#208AEF',
-    paddingVertical: 14,
-    paddingHorizontal: 48,
-    borderRadius: 8,
-    width: '100%',
-    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 16,
+    borderRadius: 12,
   },
   disabledButton: {
     opacity: 0.7,
   },
   buttonText: {
     color: '#fff',
+    textAlign: 'center',
     fontWeight: '600',
-    fontSize: 16,
   },
-  link: {
-    color: '#208AEF',
-    fontSize: 14,
+  linkText: {
+    textAlign: 'center',
+    marginTop: 16,
+    color: '#4CAF50',
+    fontWeight: '600',
   },
 });
