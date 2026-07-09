@@ -1,17 +1,37 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
 
 import { recipesApi } from '@/api';
+import AppPopup from '@/components/AppPopup';
 
 export default function GenerateRecipeScreen() {
   const [pantryItems, setPantryItems] = useState('');
   const [preferences, setPreferences] = useState('');
   const [loading, setLoading] = useState(false);
+  const [popup, setPopup] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    shouldGoBack: false,
+  });
+
+  const showPopup = (title: string, message: string, shouldGoBack = false) => {
+    setPopup({ visible: true, title, message, shouldGoBack });
+  };
+
+  const closePopup = () => {
+    const shouldGoBack = popup.shouldGoBack;
+    setPopup({ visible: false, title: '', message: '', shouldGoBack: false });
+
+    if (shouldGoBack) {
+      router.back();
+    }
+  };
 
   const handleGenerate = async () => {
     if (!pantryItems.trim()) {
-      Alert.alert('Missing pantry items');
+      showPopup('Missing pantry items', 'Please enter pantry items before generating a recipe.');
       return;
     }
 
@@ -26,43 +46,54 @@ export default function GenerateRecipeScreen() {
         preferences,
       });
 
-      Alert.alert('Recipe Generated', `${recipe.title}\n\n${recipe.description ?? ''}`);
-
-      router.back();
+      showPopup(
+        'Recipe Generated',
+        `${recipe.title}\n\n${recipe.description ?? 'Your recipe is ready to review.'}`,
+        true,
+      );
     } catch {
-      Alert.alert('Error', 'Unable to generate recipe.');
+      showPopup('Error', 'Unable to generate recipe.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>AI Recipe Generator</Text>
+    <>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>AI Recipe Generator</Text>
 
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Pantry items (comma separated)"
-        multiline
-        value={pantryItems}
-        onChangeText={setPantryItems}
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Pantry items (comma separated)"
+          multiline
+          value={pantryItems}
+          onChangeText={setPantryItems}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Preferences (optional)"
+          value={preferences}
+          onChangeText={setPreferences}
+        />
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.disabled]}
+          disabled={loading}
+          onPress={handleGenerate}
+        >
+          <Text style={styles.buttonText}>{loading ? 'Generating...' : 'Generate Recipe'}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <AppPopup
+        visible={popup.visible}
+        title={popup.title}
+        message={popup.message}
+        onClose={closePopup}
       />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Preferences (optional)"
-        value={preferences}
-        onChangeText={setPreferences}
-      />
-
-      <TouchableOpacity
-        style={[styles.button, loading && styles.disabled]}
-        disabled={loading}
-        onPress={handleGenerate}
-      >
-        <Text style={styles.buttonText}>{loading ? 'Generating...' : 'Generate Recipe'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </>
   );
 }
 
