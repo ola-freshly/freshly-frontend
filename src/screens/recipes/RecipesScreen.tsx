@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
@@ -28,19 +27,6 @@ export default function RecipesScreen() {
           <Text style={[styles.segmentText, activeTab === 'import' && styles.segmentTextActive]}>
             Import
           </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/create-recipe')}>
-          <Text style={styles.actionButtonText}>Create Recipe</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push('/generate-recipe')}
-        >
-          <Text style={styles.actionButtonText}>AI Generator</Text>
         </TouchableOpacity>
       </View>
 
@@ -78,24 +64,6 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: '#208AEF' },
   segmentText: { fontSize: 14, color: '#666' },
   segmentTextActive: { color: '#fff', fontWeight: '600' },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: '#208AEF',
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginHorizontal: 4,
-    alignItems: 'center',
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { color: '#999', fontSize: 15, textAlign: 'center', paddingHorizontal: 32 },
 });
