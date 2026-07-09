@@ -2,6 +2,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
 
+import { recipesApi } from '@/api';
+
 export default function CreateRecipeScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -9,19 +11,34 @@ export default function CreateRecipeScreen() {
   const [instructions, setInstructions] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleCreateRecipe = () => {
+  const handleCreateRecipe = async () => {
     if (!title.trim() || !ingredients.trim() || !instructions.trim()) {
       Alert.alert('Missing information', 'Please fill in title, ingredients, and instructions.');
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    setTimeout(() => {
-      setLoading(false);
+      await recipesApi.createRecipe({
+        title: title.trim(),
+        description: description.trim(),
+        ingredients: ingredients
+          .split(',')
+          .map((ingredient) => ingredient.trim())
+          .filter(Boolean),
+        instructions: instructions.trim(),
+        servings: 2,
+        estimatedTime: 30,
+      });
+
       Alert.alert('Recipe created', 'Your recipe has been saved.');
       router.back();
-    }, 800);
+    } catch {
+      Alert.alert('Error', 'Unable to create recipe. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,7 +63,7 @@ export default function CreateRecipeScreen() {
 
       <TextInput
         style={[styles.input, styles.textArea]}
-        placeholder="Ingredients"
+        placeholder="Ingredients, separated by commas"
         multiline
         value={ingredients}
         onChangeText={setIngredients}

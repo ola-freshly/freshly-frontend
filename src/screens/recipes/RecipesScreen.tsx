@@ -1,11 +1,40 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import { recipesApi, type Recipe } from '@/api';
 
 type Tab = 'recommended' | 'import';
 
 export default function RecipesScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('recommended');
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadRecipes = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const data = await recipesApi.getRecipes();
+        setRecipes(data);
+      } catch {
+        setError('Unable to load recipes.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRecipes();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -46,7 +75,33 @@ export default function RecipesScreen() {
 
       {activeTab === 'recommended' && (
         <View style={styles.content}>
-          <Text style={styles.empty}>No recipes yet. Generate from your pantry.</Text>
+          {loading ? (
+            <ActivityIndicator size="large" />
+          ) : error ? (
+            <Text style={styles.empty}>{error}</Text>
+          ) : (
+            <FlatList
+              data={recipes}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.card}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/recipe-detail',
+                      params: { id: item.id },
+                    })
+                  }
+                >
+                  <Text style={styles.title}>{item.title}</Text>
+                  <Text style={styles.subtitle}>
+                    {item.estimatedTime ?? 0} min • {item.servings ?? 0} servings
+                  </Text>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={<Text style={styles.empty}>No recipes found.</Text>}
+            />
+          )}
         </View>
       )}
 
@@ -92,10 +147,23 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     alignItems: 'center',
   },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+  actionButtonText: { color: '#fff', fontWeight: '600' },
+  content: { flex: 1 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 16,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  empty: { color: '#999', fontSize: 15, textAlign: 'center', paddingHorizontal: 32 },
+  title: { fontSize: 16, fontWeight: '600' },
+  subtitle: { marginTop: 4, color: '#666' },
+  empty: {
+    textAlign: 'center',
+    marginTop: 40,
+    color: '#999',
+    fontSize: 15,
+  },
 });
