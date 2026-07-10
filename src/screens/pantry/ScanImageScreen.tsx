@@ -1,14 +1,34 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  StyleSheet,
+  Platform,
+} from 'react-native';
+import { useRouter } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
+import { FoodCategory } from '@/api/types';
 import type { ScanResult } from '@/api/types';
-import { showToastError } from '@/utils/toast';
+import { showToastError, showToastSuccess } from '@/utils/toast';
 import * as ImagePicker from 'expo-image-picker';
 
+const CATEGORIES = Object.values(FoodCategory);
+
 export default function ScanImageScreen() {
+  const router = useRouter();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState<FoodCategory | ''>('');
+  const [editExpiry, setEditExpiry] = useState('');
+  const [editInstruction, setEditInstruction] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -52,6 +72,10 @@ export default function ScanImageScreen() {
         type: asset.mimeType || 'image/jpeg',
       });
       setResult(data);
+      setEditName(data.name);
+      setEditCategory((data.category as FoodCategory) || '');
+      setEditExpiry(data.expirationDate ?? '');
+      setEditInstruction(data.usageInstruction ?? '');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Scan failed';
       setError(message);
@@ -59,6 +83,37 @@ export default function ScanImageScreen() {
     } finally {
       setScanning(false);
     }
+  };
+
+  const handleSave = async () => {
+    if (!editName.trim()) {
+      showToastError('Name is required');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await pantryApi.create({
+        name: editName.trim(),
+        quantity: 1,
+        unit: 'unit',
+        category: editCategory || undefined,
+        expiryDate: editExpiry.trim() || undefined,
+        usageInstruction: editInstruction.trim() || undefined,
+        source: 'ai',
+      });
+      showToastSuccess('Item saved to pantry');
+      router.back();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to save';
+      showToastError(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const reset = () => {
+    setResult(null);
+    setError(null);
   };
 
   if (scanning) {
@@ -72,31 +127,66 @@ export default function ScanImageScreen() {
 
   if (result) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>AI Scan Result</Text>
-        <View style={styles.card}>
-          <Text style={styles.field}>
-            <Text style={styles.label}>Name: </Text>
-            {result.name}
-          </Text>
-          <Text style={styles.field}>
-            <Text style={styles.label}>Category: </Text>
-            {result.category}
-          </Text>
-          <Text style={styles.field}>
-            <Text style={styles.label}>Expiry: </Text>
-            {result.expirationDate ?? 'Not detected'}
-          </Text>
-          <Text style={styles.field}>
-            <Text style={styles.label}>Instruction: </Text>
-            {result.usageInstruction ?? 'N/A'}
-          </Text>
-          <Text style={styles.field}>
-            <Text style={styles.label}>Confidence: </Text>
-            {Math.round(result.confidence * 100)}%
-          </Text>
-        </View>
-      </View>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>Review & Save</Text>
+
+        <Text style={styles.confidence}>AI Confidence: {Math.round(result.confidence * 100)}%</Text>
+
+        <Text style={styles.label}>Name</Text>
+        <TextInput style={styles.input} value={editName} onChangeText={setEditName} />
+
+        <Text style={styles.label}>Category</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+          {CATEGORIES.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.chip, editCategory === cat && styles.chipActive]}
+              onPress={() => setEditCategory(editCategory === cat ? '' : cat)}
+            >
+              <Text style={[styles.chipText, editCategory === cat && styles.chipTextActive]}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <Text style={styles.label}>Expiry Date</Text>
+        <TextInput
+          style={styles.input}
+          value={editExpiry}
+          onChangeText={setEditExpiry}
+          placeholder="YYYY-MM-DD"
+        />
+
+        <Text style={styles.label}>Usage Instruction</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={editInstruction}
+          onChangeText={setEditInstruction}
+          multiline
+          numberOfLines={3}
+        />
+
+        <TouchableOpacity
+          style={[styles.btn, submitting && styles.btnDisabled]}
+          onPress={handleSave}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.btnText}>Save to Pantry</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.resetBtn} onPress={reset}>
+          <Text style={styles.resetText}>Scan Another</Text>
+        </TouchableOpacity>
+      </ScrollView>
     );
   }
 
@@ -118,18 +208,47 @@ export default function ScanImageScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
+  container: { flex: 1, backgroundColor: '#fff' },
+  content: { padding: 20, paddingBottom: 48 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: '700', color: '#333', marginBottom: 24, textAlign: 'center' },
+  title: { fontSize: 22, fontWeight: '700', color: '#333', marginBottom: 8, textAlign: 'center' },
   statusText: { marginTop: 12, fontSize: 15, color: '#666' },
+  confidence: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 20 },
+
+  label: { fontSize: 14, fontWeight: '500', color: '#444', marginBottom: 6, marginTop: 14 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'web' ? 10 : 12,
+    fontSize: 15,
+    color: '#333',
+    backgroundColor: '#f9fafb',
+  },
+  textArea: { minHeight: 80, textAlignVertical: 'top' },
+  chipRow: { marginTop: 4 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    marginRight: 8,
+    backgroundColor: '#f9fafb',
+  },
+  chipActive: { backgroundColor: '#208AEF', borderColor: '#208AEF' },
+  chipText: { fontSize: 13, color: '#555' },
+  chipTextActive: { color: '#fff' },
 
   btn: {
     backgroundColor: '#208AEF',
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
-    marginBottom: 12,
+    marginTop: 24,
   },
+  btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   btnOutline: {
     paddingVertical: 16,
@@ -139,16 +258,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnOutlineText: { color: '#208AEF', fontSize: 16, fontWeight: '600' },
-
-  card: {
-    backgroundColor: '#f9fafb',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  field: { fontSize: 15, color: '#333', marginBottom: 10 },
-  label: { fontWeight: '600', color: '#555' },
+  resetBtn: { marginTop: 16, alignItems: 'center' },
+  resetText: { color: '#208AEF', fontSize: 14, fontWeight: '500' },
 
   errorText: { color: '#ef4444', fontSize: 14, marginBottom: 16, textAlign: 'center' },
 });
