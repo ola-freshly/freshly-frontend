@@ -47,7 +47,11 @@ const MOCK = {
 
 export default function MealDetailScreen() {
   const router = useRouter();
-  const { id, date, mealType } = useLocalSearchParams<{ id?: string; date?: string; mealType?: string }>();
+  const { id, date, mealType } = useLocalSearchParams<{
+    id?: string;
+    date?: string;
+    mealType?: string;
+  }>();
   const [tab, setTab] = useState<Tab>('ingredients');
   const [servings, setServings] = useState(MOCK.servings);
   const factor = servings / MOCK.servings;
@@ -100,7 +104,11 @@ export default function MealDetailScreen() {
           {/* tabs */}
           <View style={styles.tabs}>
             {(['ingredients', 'instructions', 'nutrition'] as Tab[]).map((t) => (
-              <Pressable key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
+              <Pressable
+                key={t}
+                style={[styles.tab, tab === t && styles.tabActive]}
+                onPress={() => setTab(t)}
+              >
                 <Text style={[styles.tabT, tab === t && styles.tabTActive]}>
                   {t[0].toUpperCase() + t.slice(1)}
                 </Text>
@@ -113,7 +121,10 @@ export default function MealDetailScreen() {
               <View style={styles.stepper}>
                 <Text style={styles.stepperLabel}>Servings</Text>
                 <View style={styles.stepperControls}>
-                  <Pressable style={styles.stepBtn} onPress={() => setServings((s) => Math.max(1, s - 1))}>
+                  <Pressable
+                    style={styles.stepBtn}
+                    onPress={() => setServings((s) => Math.max(1, s - 1))}
+                  >
                     <Ionicons name="remove" size={18} color="#333" />
                   </Pressable>
                   <Text style={styles.stepVal}>{servings}</Text>

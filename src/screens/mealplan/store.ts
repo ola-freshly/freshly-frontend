@@ -44,10 +44,18 @@ let seeded = false;
   seeded = true;
   const ws = startOfWeek(new Date());
   const d = (n: number) => iso(addDays(ws, n));
-  map.set(keyOf(d(0), 'breakfast'), [{ id: 's1', title: 'Greek Yogurt & Berry Bowl', cookTime: 10, calories: 320 }]);
-  map.set(keyOf(d(0), 'lunch'), [{ id: 's2', title: 'Grilled Chicken Salad', cookTime: 25, calories: 450 }]);
-  map.set(keyOf(d(0), 'dinner'), [{ id: 's3', title: 'Shrimp Tom Yum Soup', cookTime: 35, calories: 520 }]);
-  map.set(keyOf(d(1), 'breakfast'), [{ id: 's4', title: 'Avocado Toast', cookTime: 8, calories: 290 }]);
+  map.set(keyOf(d(0), 'breakfast'), [
+    { id: 's1', title: 'Greek Yogurt & Berry Bowl', cookTime: 10, calories: 320 },
+  ]);
+  map.set(keyOf(d(0), 'lunch'), [
+    { id: 's2', title: 'Grilled Chicken Salad', cookTime: 25, calories: 450 },
+  ]);
+  map.set(keyOf(d(0), 'dinner'), [
+    { id: 's3', title: 'Shrimp Tom Yum Soup', cookTime: 35, calories: 520 },
+  ]);
+  map.set(keyOf(d(1), 'breakfast'), [
+    { id: 's4', title: 'Avocado Toast', cookTime: 8, calories: 290 },
+  ]);
 })();
 
 export const plannerStore = {
@@ -61,7 +69,10 @@ export const plannerStore = {
   },
   remove(date: string, meal: MealType, id: string) {
     const k = keyOf(date, meal);
-    map.set(k, (map.get(k) ?? []).filter((x) => x.id !== id));
+    map.set(
+      k,
+      (map.get(k) ?? []).filter((x) => x.id !== id),
+    );
     emit();
   },
   subscribe(l: () => void) {

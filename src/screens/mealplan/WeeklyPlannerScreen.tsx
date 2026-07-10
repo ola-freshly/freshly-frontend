@@ -29,7 +29,10 @@ export default function WeeklyPlannerScreen() {
         <View style={{ alignItems: 'center' }}>
           <Text style={styles.weekRange}>
             {weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} –{' '}
-            {addDays(weekStart, 6).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            {addDays(weekStart, 6).toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+            })}
           </Text>
           <View style={styles.weekKcalRow}>
             <Ionicons name="flame" size={12} color={ACCENT} />
@@ -64,7 +67,11 @@ export default function WeeklyPlannerScreen() {
           <View key={dayIso} style={styles.dayCard}>
             <View style={styles.dayHead}>
               <Text style={styles.dayTitle}>
-                {day.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                {day.toLocaleDateString(undefined, {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric',
+                })}
               </Text>
               {dayKcal > 0 && <Text style={styles.dayKcal}>{dayKcal} kcal</Text>}
             </View>
@@ -190,12 +197,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
   },
-  dishIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  dishIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dishName: { fontSize: 14, fontWeight: '600', color: '#222' },
   dishMeta: { fontSize: 12, color: '#888', marginTop: 2 },
   kcal: { fontSize: 14, fontWeight: '700', color: '#333' },
   kcalUnit: { fontSize: 10, color: '#999', fontWeight: '400' },
-  addMore: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4, paddingLeft: 2 },
+  addMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    paddingLeft: 2,
+  },
   addMoreT: { fontSize: 13, fontWeight: '600' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
   chip: {

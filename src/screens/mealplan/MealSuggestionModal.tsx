@@ -9,10 +9,30 @@ type Suggestion = { title: string; description: string; cookTime: number; calori
 
 // --- MOCK DATA (replace with API later) ---
 const MOCK_SUGGESTIONS: Suggestion[] = [
-  { title: 'Grilled Chicken Salad', description: 'Fresh greens, grilled chicken and a light olive-oil dressing.', cookTime: 25, calories: 450 },
-  { title: 'Shrimp Tom Yum Soup', description: 'Spicy-sour Thai soup with shrimp, lemongrass and lime.', cookTime: 35, calories: 520 },
-  { title: 'Veggie Stir-Fry with Rice', description: 'Quick pantry stir-fry served over steamed rice.', cookTime: 25, calories: 480 },
-  { title: 'Salmon Poke Bowl', description: 'Rice bowl with salmon, avocado and cucumber.', cookTime: 20, calories: 510 },
+  {
+    title: 'Grilled Chicken Salad',
+    description: 'Fresh greens, grilled chicken and a light olive-oil dressing.',
+    cookTime: 25,
+    calories: 450,
+  },
+  {
+    title: 'Shrimp Tom Yum Soup',
+    description: 'Spicy-sour Thai soup with shrimp, lemongrass and lime.',
+    cookTime: 35,
+    calories: 520,
+  },
+  {
+    title: 'Veggie Stir-Fry with Rice',
+    description: 'Quick pantry stir-fry served over steamed rice.',
+    cookTime: 25,
+    calories: 480,
+  },
+  {
+    title: 'Salmon Poke Bowl',
+    description: 'Rice bowl with salmon, avocado and cucumber.',
+    cookTime: 20,
+    calories: 510,
+  },
 ];
 
 export default function MealSuggestionModal() {
@@ -109,7 +129,14 @@ const styles = StyleSheet.create({
   toastT: { flex: 1, fontSize: 13, color: ACCENT, fontWeight: '600' },
   card: { backgroundColor: '#FAFAFA', borderRadius: 16, padding: 16, gap: 10 },
   cardTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  thumb: { width: 52, height: 52, borderRadius: 12, backgroundColor: ACCENT + '18', alignItems: 'center', justifyContent: 'center' },
+  thumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: ACCENT + '18',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: { fontSize: 17, fontWeight: '700', color: '#111' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   meta: { fontSize: 13, color: '#888' },
