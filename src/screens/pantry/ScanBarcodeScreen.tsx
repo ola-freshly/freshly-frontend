@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
-import { FoodCategory } from '@/api/types';
+import { FoodCategory, PantryItemSource } from '@/api/types';
 import type { ScanResult } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
 
@@ -70,7 +70,7 @@ export default function ScanBarcodeScreen() {
         category: editCategory || undefined,
         expiryDate: editExpiry.trim() || undefined,
         usageInstruction: editInstruction.trim() || undefined,
-        source: 'barcode',
+        source: PantryItemSource.BARCODE,
       });
       showToastSuccess('Item saved to pantry');
       router.back();

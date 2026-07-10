@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
-import { FoodCategory } from '@/api/types';
+import { FoodCategory, PantryItemSource } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
 
 const CATEGORIES = Object.values(FoodCategory);
@@ -53,7 +53,7 @@ export default function AddItemScreen() {
         category: category || undefined,
         expiryDate: expiryDate.trim() || undefined,
         usageInstruction: usageInstruction.trim() || undefined,
-        source: 'manual',
+        source: PantryItemSource.MANUAL,
       });
       showToastSuccess('Item added to pantry');
       router.back();
