@@ -25,6 +25,8 @@ export default function AppLayout() {
       <Stack.Screen name="scan-barcode" options={{ title: 'Scan Barcode' }} />
       <Stack.Screen name="scan-image" options={{ title: 'Identify Food' }} />
       <Stack.Screen name="recipe-detail" options={{ title: 'Recipe' }} />
+      <Stack.Screen name="meal-detail" options={{ title: 'Meal' }} />
+      <Stack.Screen name="meal-suggestion" options={{ presentation: 'modal', title: 'Suggestions' }} />
       <Stack.Screen name="edit-profile" options={{ title: 'Edit Profile' }} />
       <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
       <Stack.Screen name="profile-setup" options={{ headerShown: true }} />
