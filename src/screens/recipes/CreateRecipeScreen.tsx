@@ -3,7 +3,14 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
 
 import { recipesApi } from '@/api';
-import AppPopup from '@/components/AppPopup';
+import FeedbackModal from '@/components/FeedbackModal';
+
+type FeedbackState = {
+  visible: boolean;
+  title: string;
+  message: string;
+  type: 'success' | 'error';
+};
 
 export default function CreateRecipeScreen() {
   const [title, setTitle] = useState('');
@@ -11,29 +18,40 @@ export default function CreateRecipeScreen() {
   const [ingredients, setIngredients] = useState('');
   const [instructions, setInstructions] = useState('');
   const [loading, setLoading] = useState(false);
-  const [popup, setPopup] = useState({
+  const [shouldGoBack, setShouldGoBack] = useState(false);
+
+  const [feedback, setFeedback] = useState<FeedbackState>({
     visible: false,
     title: '',
     message: '',
-    shouldGoBack: false,
+    type: 'success',
   });
 
-  const showPopup = (popupTitle: string, message: string, shouldGoBack = false) => {
-    setPopup({ visible: true, title: popupTitle, message, shouldGoBack });
+  const showFeedback = (feedbackTitle: string, message: string, type: 'success' | 'error') => {
+    setFeedback({
+      visible: true,
+      title: feedbackTitle,
+      message,
+      type,
+    });
   };
 
-  const closePopup = () => {
-    const shouldGoBack = popup.shouldGoBack;
-    setPopup({ visible: false, title: '', message: '', shouldGoBack: false });
+  const closeFeedback = () => {
+    setFeedback((current) => ({ ...current, visible: false }));
 
     if (shouldGoBack) {
+      setShouldGoBack(false);
       router.back();
     }
   };
 
   const handleCreateRecipe = async () => {
     if (!title.trim() || !ingredients.trim() || !instructions.trim()) {
-      showPopup('Missing information', 'Please fill in title, ingredients, and instructions.');
+      showFeedback(
+        'Missing information',
+        'Please fill in title, ingredients, and instructions.',
+        'error',
+      );
       return;
     }
 
@@ -52,9 +70,14 @@ export default function CreateRecipeScreen() {
         estimatedTime: 30,
       });
 
-      showPopup('Recipe created', 'Your recipe has been saved.', true);
+      setShouldGoBack(true);
+      showFeedback('Recipe created', 'Your recipe has been saved.', 'success');
     } catch {
-      showPopup('Error', 'Unable to create recipe. Please try again.');
+      showFeedback(
+        'Unable to create recipe',
+        'Please check your connection and try again.',
+        'error',
+      );
     } finally {
       setLoading(false);
     }
@@ -106,11 +129,12 @@ export default function CreateRecipeScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <AppPopup
-        visible={popup.visible}
-        title={popup.title}
-        message={popup.message}
-        onClose={closePopup}
+      <FeedbackModal
+        visible={feedback.visible}
+        title={feedback.title}
+        message={feedback.message}
+        type={feedback.type}
+        onClose={closeFeedback}
       />
     </>
   );
@@ -120,7 +144,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 20 },
   title: { fontSize: 28, fontWeight: '700', color: '#111827' },
-  subtitle: { marginTop: 6, marginBottom: 24, color: '#6b7280', fontSize: 15 },
+  subtitle: {
+    marginTop: 6,
+    marginBottom: 24,
+    color: '#6b7280',
+    fontSize: 15,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
