@@ -11,7 +11,6 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
 import type { PantryItem } from '@/api/types';
-import { showToastError } from '@/utils/toast';
 
 export default function PantryScreen() {
   const router = useRouter();
@@ -30,7 +29,6 @@ export default function PantryScreen() {
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to load pantry items';
       setError(message);
-      showToastError(message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -53,20 +51,18 @@ export default function PantryScreen() {
     );
   }
 
-  if (error && items.length === 0) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => fetchItems()}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {items.length === 0 ? (
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{error}</Text>
+          <TouchableOpacity onPress={() => fetchItems()}>
+            <Text style={styles.errorBannerRetry}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {items.length === 0 && !error ? (
         <Text style={styles.empty}>No items in your pantry yet.</Text>
       ) : (
         <FlatList
@@ -134,14 +130,18 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
     marginBottom: 'auto',
   },
-  errorText: { color: '#ef4444', fontSize: 15, marginBottom: 12, textAlign: 'center' },
-  retryBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#208AEF',
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fecaca',
   },
-  retryText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  errorBannerText: { color: '#dc2626', fontSize: 13, flex: 1 },
+  errorBannerRetry: { color: '#208AEF', fontSize: 13, fontWeight: '600', marginLeft: 12 },
   fab: {
     position: 'absolute',
     bottom: 24,
