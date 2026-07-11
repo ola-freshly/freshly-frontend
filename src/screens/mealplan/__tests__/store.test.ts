@@ -1,10 +1,4 @@
-import {
-  addDays,
-  iso,
-  plannerStore,
-  startOfWeek,
-  type PlannerDish,
-} from '../store';
+import { addDays, iso, plannerStore, startOfWeek, type PlannerDish } from '../store';
 
 describe('meal planner store', () => {
   const date = '2099-01-01';
@@ -38,10 +32,7 @@ describe('meal planner store', () => {
     plannerStore.add(date, 'lunch', firstDish);
     plannerStore.add(date, 'lunch', secondDish);
 
-    expect(plannerStore.get(date, 'lunch')).toEqual([
-      firstDish,
-      secondDish,
-    ]);
+    expect(plannerStore.get(date, 'lunch')).toEqual([firstDish, secondDish]);
   });
 
   it('removes a dish from a meal', () => {

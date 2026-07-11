@@ -76,4 +76,3 @@ describe('recipesApi', () => {
     expect(result).toEqual(generatedRecipe);
   });
 });
-
