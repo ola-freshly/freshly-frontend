@@ -43,3 +43,37 @@ export interface RegisterRequest {
   email: string;
   password: string;
 }
+
+export interface Recipe {
+  id: string;
+  title: string;
+  description?: string;
+  instructions: string;
+  servings?: number;
+  estimatedTime?: number;
+  ingredients: string[];
+}
+
+export interface CreateRecipeRequest {
+  title: string;
+  description?: string;
+  instructions: string;
+  servings?: number;
+  estimatedTime?: number;
+  ingredients: string[];
+}
+
+export interface GenerateRecipeRequest {
+  pantryItems: string[];
+  preferences?: string;
+}
+
+export interface GeneratedRecipe {
+  title: string;
+  description?: string;
+  ingredients: string[];
+  instructions: string;
+  estimatedTime: number;
+  servings: number;
+  missingIngredients?: string[];
+}

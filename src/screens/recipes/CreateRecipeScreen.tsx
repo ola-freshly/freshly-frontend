@@ -1,6 +1,16 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
+
+import { recipesApi } from '@/api';
+import FeedbackModal from '@/components/FeedbackModal';
+
+type FeedbackState = {
+  visible: boolean;
+  title: string;
+  message: string;
+  type: 'success' | 'error';
+};
 
 export default function CreateRecipeScreen() {
   const [title, setTitle] = useState('');
@@ -8,66 +18,125 @@ export default function CreateRecipeScreen() {
   const [ingredients, setIngredients] = useState('');
   const [instructions, setInstructions] = useState('');
   const [loading, setLoading] = useState(false);
+  const [shouldGoBack, setShouldGoBack] = useState(false);
 
-  const handleCreateRecipe = () => {
+  const [feedback, setFeedback] = useState<FeedbackState>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'success',
+  });
+
+  const showFeedback = (feedbackTitle: string, message: string, type: 'success' | 'error') => {
+    setFeedback({
+      visible: true,
+      title: feedbackTitle,
+      message,
+      type,
+    });
+  };
+
+  const closeFeedback = () => {
+    setFeedback((current) => ({ ...current, visible: false }));
+
+    if (shouldGoBack) {
+      setShouldGoBack(false);
+      router.back();
+    }
+  };
+
+  const handleCreateRecipe = async () => {
     if (!title.trim() || !ingredients.trim() || !instructions.trim()) {
-      Alert.alert('Missing information', 'Please fill in title, ingredients, and instructions.');
+      showFeedback(
+        'Missing information',
+        'Please fill in title, ingredients, and instructions.',
+        'error',
+      );
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    setTimeout(() => {
+      await recipesApi.createRecipe({
+        title: title.trim(),
+        description: description.trim(),
+        ingredients: ingredients
+          .split(',')
+          .map((ingredient) => ingredient.trim())
+          .filter(Boolean),
+        instructions: instructions.trim(),
+        servings: 2,
+        estimatedTime: 30,
+      });
+
+      setShouldGoBack(true);
+      showFeedback('Recipe created', 'Your recipe has been saved.', 'success');
+    } catch {
+      showFeedback(
+        'Unable to create recipe',
+        'Please check your connection and try again.',
+        'error',
+      );
+    } finally {
       setLoading(false);
-      Alert.alert('Recipe created', 'Your recipe has been saved.');
-      router.back();
-    }, 800);
+    }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Create Recipe</Text>
-      <Text style={styles.subtitle}>Add your own recipe manually.</Text>
+    <>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Create Recipe</Text>
+        <Text style={styles.subtitle}>Add your own recipe manually.</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Recipe title"
-        value={title}
-        onChangeText={setTitle}
+        <TextInput
+          style={styles.input}
+          placeholder="Recipe title"
+          value={title}
+          onChangeText={setTitle}
+        />
+
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Description"
+          multiline
+          value={description}
+          onChangeText={setDescription}
+        />
+
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Ingredients, separated by commas"
+          multiline
+          value={ingredients}
+          onChangeText={setIngredients}
+        />
+
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Cooking instructions"
+          multiline
+          value={instructions}
+          onChangeText={setInstructions}
+        />
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          disabled={loading}
+          onPress={handleCreateRecipe}
+        >
+          <Text style={styles.buttonText}>{loading ? 'Saving...' : 'Save Recipe'}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <FeedbackModal
+        visible={feedback.visible}
+        title={feedback.title}
+        message={feedback.message}
+        type={feedback.type}
+        onClose={closeFeedback}
       />
-
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Description"
-        multiline
-        value={description}
-        onChangeText={setDescription}
-      />
-
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Ingredients"
-        multiline
-        value={ingredients}
-        onChangeText={setIngredients}
-      />
-
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Cooking instructions"
-        multiline
-        value={instructions}
-        onChangeText={setInstructions}
-      />
-
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        disabled={loading}
-        onPress={handleCreateRecipe}
-      >
-        <Text style={styles.buttonText}>{loading ? 'Saving...' : 'Save Recipe'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </>
   );
 }
 
@@ -75,7 +144,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 20 },
   title: { fontSize: 28, fontWeight: '700', color: '#111827' },
-  subtitle: { marginTop: 6, marginBottom: 24, color: '#6b7280', fontSize: 15 },
+  subtitle: {
+    marginTop: 6,
+    marginBottom: 24,
+    color: '#6b7280',
+    fontSize: 15,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
