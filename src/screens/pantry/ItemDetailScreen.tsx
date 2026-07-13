@@ -74,14 +74,25 @@ export default function ItemDetailScreen() {
     if (!item || !editForm.name.trim()) return;
     setSaving(true);
     try {
-      const updated = await pantryApi.update(item.id, {
+      await pantryApi.update(item.id, {
         name: editForm.name.trim(),
         quantity: Number(editForm.quantity),
         unit: editForm.unit.trim(),
         expiryDate: editForm.expiryDate.trim() || undefined,
         usageInstruction: editForm.usageInstruction.trim() || undefined,
       });
-      setItem(updated);
+      setItem((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: editForm.name.trim(),
+              quantity: Number(editForm.quantity),
+              unit: editForm.unit.trim(),
+              expiryDate: editForm.expiryDate.trim() || prev.expiryDate,
+              usageInstruction: editForm.usageInstruction.trim() || prev.usageInstruction,
+            }
+          : prev,
+      );
       setEditing(false);
       showToastSuccess('Item updated');
     } catch (e: unknown) {
