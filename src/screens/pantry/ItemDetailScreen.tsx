@@ -14,6 +14,14 @@ import { pantryApi } from '@/api/pantry';
 import type { PantryItem } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
 
+interface EditForm {
+  name: string;
+  quantity: string;
+  unit: string;
+  expiryDate: string;
+  usageInstruction: string;
+}
+
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -21,11 +29,13 @@ export default function ItemDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editQty, setEditQty] = useState('');
-  const [editUnit, setEditUnit] = useState('');
-  const [editExpiry, setEditExpiry] = useState('');
-  const [editInstruction, setEditInstruction] = useState('');
+  const [editForm, setEditForm] = useState<EditForm>({
+    name: '',
+    quantity: '',
+    unit: '',
+    expiryDate: '',
+    usageInstruction: '',
+  });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -50,24 +60,26 @@ export default function ItemDetailScreen() {
 
   const startEditing = () => {
     if (!item) return;
-    setEditName(item.name);
-    setEditQty(String(item.quantity));
-    setEditUnit(item.unit);
-    setEditExpiry(item.expiryDate ?? '');
-    setEditInstruction(item.usageInstruction ?? '');
+    setEditForm({
+      name: item.name,
+      quantity: String(item.quantity),
+      unit: item.unit,
+      expiryDate: item.expiryDate ?? '',
+      usageInstruction: item.usageInstruction ?? '',
+    });
     setEditing(true);
   };
 
   const handleSave = async () => {
-    if (!item || !editName.trim()) return;
+    if (!item || !editForm.name.trim()) return;
     setSaving(true);
     try {
       const updated = await pantryApi.update(item.id, {
-        name: editName.trim(),
-        quantity: Number(editQty),
-        unit: editUnit.trim(),
-        expiryDate: editExpiry.trim() || undefined,
-        usageInstruction: editInstruction.trim() || undefined,
+        name: editForm.name.trim(),
+        quantity: Number(editForm.quantity),
+        unit: editForm.unit.trim(),
+        expiryDate: editForm.expiryDate.trim() || undefined,
+        usageInstruction: editForm.usageInstruction.trim() || undefined,
       });
       setItem(updated);
       setEditing(false);
@@ -128,37 +140,37 @@ export default function ItemDetailScreen() {
         <Text style={styles.name}>Edit Item</Text>
 
         <Text style={styles.label}>Name</Text>
-        <TextInput style={styles.input} value={editName} onChangeText={setEditName} />
+        <TextInput style={styles.input} value={editForm.name} onChangeText={(v) => setEditForm((prev) => ({ ...prev, name: v }))} />
 
         <View style={styles.formRow}>
           <View style={styles.half}>
             <Text style={styles.label}>Quantity</Text>
             <TextInput
               style={styles.input}
-              value={editQty}
-              onChangeText={setEditQty}
+              value={editForm.quantity}
+              onChangeText={(v) => setEditForm((prev) => ({ ...prev, quantity: v }))}
               keyboardType="decimal-pad"
             />
           </View>
           <View style={styles.half}>
             <Text style={styles.label}>Unit</Text>
-            <TextInput style={styles.input} value={editUnit} onChangeText={setEditUnit} />
+            <TextInput style={styles.input} value={editForm.unit} onChangeText={(v) => setEditForm((prev) => ({ ...prev, unit: v }))} />
           </View>
         </View>
 
         <Text style={styles.label}>Expiry Date</Text>
         <TextInput
           style={styles.input}
-          value={editExpiry}
-          onChangeText={setEditExpiry}
+          value={editForm.expiryDate}
+          onChangeText={(v) => setEditForm((prev) => ({ ...prev, expiryDate: v }))}
           placeholder="YYYY-MM-DD"
         />
 
         <Text style={styles.label}>Usage Instruction</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          value={editInstruction}
-          onChangeText={setEditInstruction}
+          value={editForm.usageInstruction}
+          onChangeText={(v) => setEditForm((prev) => ({ ...prev, usageInstruction: v }))}
           multiline
           numberOfLines={3}
         />
