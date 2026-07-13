@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
 import { FoodCategory, PantryItemSource } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
+import { validatePantryItem } from '@/utils/pantryValidation';
 
 const CATEGORIES = Object.values(FoodCategory);
 
@@ -46,14 +47,7 @@ export default function AddItemScreen() {
   };
 
   const validate = (): boolean => {
-    const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = 'Name is required';
-    if (!form.quantity.trim()) errs.quantity = 'Quantity is required';
-    else if (isNaN(Number(form.quantity)) || Number(form.quantity) < 0)
-      errs.quantity = 'Must be a positive number';
-    if (!form.unit.trim()) errs.unit = 'Unit is required';
-    if (form.expiryDate.trim() && isNaN(Date.parse(form.expiryDate)))
-      errs.expiryDate = 'Invalid date (YYYY-MM-DD)';
+    const errs = validatePantryItem(form);
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
