@@ -16,26 +16,43 @@ import { showToastError, showToastSuccess } from '@/utils/toast';
 
 const CATEGORIES = Object.values(FoodCategory);
 
+interface FormState {
+  name: string;
+  quantity: string;
+  unit: string;
+  category: FoodCategory | '';
+  expiryDate: string;
+  usageInstruction: string;
+}
+
+const INITIAL_FORM: FormState = {
+  name: '',
+  quantity: '',
+  unit: '',
+  category: '',
+  expiryDate: '',
+  usageInstruction: '',
+};
+
 export default function AddItemScreen() {
   const router = useRouter();
 
-  const [name, setName] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [unit, setUnit] = useState('');
-  const [category, setCategory] = useState<FoodCategory | ''>('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [usageInstruction, setUsageInstruction] = useState('');
+  const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
-    if (!name.trim()) errs.name = 'Name is required';
-    if (!quantity.trim()) errs.quantity = 'Quantity is required';
-    else if (isNaN(Number(quantity)) || Number(quantity) < 0)
+    if (!form.name.trim()) errs.name = 'Name is required';
+    if (!form.quantity.trim()) errs.quantity = 'Quantity is required';
+    else if (isNaN(Number(form.quantity)) || Number(form.quantity) < 0)
       errs.quantity = 'Must be a positive number';
-    if (!unit.trim()) errs.unit = 'Unit is required';
-    if (expiryDate.trim() && isNaN(Date.parse(expiryDate)))
+    if (!form.unit.trim()) errs.unit = 'Unit is required';
+    if (form.expiryDate.trim() && isNaN(Date.parse(form.expiryDate)))
       errs.expiryDate = 'Invalid date (YYYY-MM-DD)';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -47,12 +64,12 @@ export default function AddItemScreen() {
     setSubmitting(true);
     try {
       await pantryApi.create({
-        name: name.trim(),
-        quantity: Number(quantity),
-        unit: unit.trim(),
-        category: category || undefined,
-        expiryDate: expiryDate.trim() || undefined,
-        usageInstruction: usageInstruction.trim() || undefined,
+        name: form.name.trim(),
+        quantity: Number(form.quantity),
+        unit: form.unit.trim(),
+        category: form.category || undefined,
+        expiryDate: form.expiryDate.trim() || undefined,
+        usageInstruction: form.usageInstruction.trim() || undefined,
         source: PantryItemSource.MANUAL,
       });
       showToastSuccess('Item added to pantry');
@@ -87,8 +104,8 @@ export default function AddItemScreen() {
       <Text style={styles.label}>Name *</Text>
       <TextInput
         style={styles.input}
-        value={name}
-        onChangeText={setName}
+        value={form.name}
+        onChangeText={(v) => updateField('name', v)}
         placeholder="e.g. Organic Milk"
       />
       {errors.name && <Text style={styles.error}>{errors.name}</Text>}
@@ -98,8 +115,8 @@ export default function AddItemScreen() {
           <Text style={styles.label}>Quantity *</Text>
           <TextInput
             style={styles.input}
-            value={quantity}
-            onChangeText={setQuantity}
+            value={form.quantity}
+            onChangeText={(v) => updateField('quantity', v)}
             placeholder="2"
             keyboardType="decimal-pad"
           />
@@ -109,8 +126,8 @@ export default function AddItemScreen() {
           <Text style={styles.label}>Unit *</Text>
           <TextInput
             style={styles.input}
-            value={unit}
-            onChangeText={setUnit}
+            value={form.unit}
+            onChangeText={(v) => updateField('unit', v)}
             placeholder="liters"
           />
           {errors.unit && <Text style={styles.error}>{errors.unit}</Text>}
@@ -122,10 +139,10 @@ export default function AddItemScreen() {
         {CATEGORIES.map((cat) => (
           <TouchableOpacity
             key={cat}
-            style={[styles.chip, category === cat && styles.chipActive]}
-            onPress={() => setCategory(category === cat ? '' : cat)}
+            style={[styles.chip, form.category === cat && styles.chipActive]}
+            onPress={() => updateField('category', form.category === cat ? '' : cat)}
           >
-            <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>{cat}</Text>
+            <Text style={[styles.chipText, form.category === cat && styles.chipTextActive]}>{cat}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -133,8 +150,8 @@ export default function AddItemScreen() {
       <Text style={styles.label}>Expiry Date</Text>
       <TextInput
         style={styles.input}
-        value={expiryDate}
-        onChangeText={setExpiryDate}
+        value={form.expiryDate}
+        onChangeText={(v) => updateField('expiryDate', v)}
         placeholder="YYYY-MM-DD"
       />
       {errors.expiryDate && <Text style={styles.error}>{errors.expiryDate}</Text>}
@@ -142,8 +159,8 @@ export default function AddItemScreen() {
       <Text style={styles.label}>Usage Instruction</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
-        value={usageInstruction}
-        onChangeText={setUsageInstruction}
+        value={form.usageInstruction}
+        onChangeText={(v) => updateField('usageInstruction', v)}
         placeholder="e.g. Store in a cool, dry place"
         multiline
         numberOfLines={3}
