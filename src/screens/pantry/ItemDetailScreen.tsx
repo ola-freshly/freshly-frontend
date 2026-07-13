@@ -151,7 +151,11 @@ export default function ItemDetailScreen() {
         <Text style={styles.name}>Edit Item</Text>
 
         <Text style={styles.label}>Name</Text>
-        <TextInput style={styles.input} value={editForm.name} onChangeText={(v) => setEditForm((prev) => ({ ...prev, name: v }))} />
+        <TextInput
+          style={styles.input}
+          value={editForm.name}
+          onChangeText={(v) => setEditForm((prev) => ({ ...prev, name: v }))}
+        />
 
         <View style={styles.formRow}>
           <View style={styles.half}>
@@ -165,7 +169,11 @@ export default function ItemDetailScreen() {
           </View>
           <View style={styles.half}>
             <Text style={styles.label}>Unit</Text>
-            <TextInput style={styles.input} value={editForm.unit} onChangeText={(v) => setEditForm((prev) => ({ ...prev, unit: v }))} />
+            <TextInput
+              style={styles.input}
+              value={editForm.unit}
+              onChangeText={(v) => setEditForm((prev) => ({ ...prev, unit: v }))}
+            />
           </View>
         </View>
 

@@ -136,7 +136,9 @@ export default function AddItemScreen() {
             style={[styles.chip, form.category === cat && styles.chipActive]}
             onPress={() => updateField('category', form.category === cat ? '' : cat)}
           >
-            <Text style={[styles.chipText, form.category === cat && styles.chipTextActive]}>{cat}</Text>
+            <Text style={[styles.chipText, form.category === cat && styles.chipTextActive]}>
+              {cat}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
