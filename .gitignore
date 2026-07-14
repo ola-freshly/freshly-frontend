@@ -44,3 +44,7 @@ example
 
 .claude
 .idea
+
+# Playwright
+test-results/
+playwright-report/
