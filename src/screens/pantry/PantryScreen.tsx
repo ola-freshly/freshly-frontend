@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
+import { pantryCache } from '@/utils/pantryCache';
 import type { PantryItem } from '@/api/types';
 
 export default function PantryScreen() {
@@ -18,17 +19,26 @@ export default function PantryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showingCached, setShowingCached] = useState(false);
 
   const fetchItems = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
       setError(null);
+      setShowingCached(false);
       const data = await pantryApi.getAll();
       setItems(data);
+      pantryCache.set(data);
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to load pantry items';
-      setError(message);
+      const cached = await pantryCache.get();
+      if (cached) {
+        setItems(cached);
+        setShowingCached(true);
+      } else {
+        const message = e instanceof Error ? e.message : 'Failed to load pantry items';
+        setError(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -53,6 +63,13 @@ export default function PantryScreen() {
 
   return (
     <View style={styles.container}>
+      {showingCached && (
+        <View style={styles.cacheBanner}>
+          <Text style={styles.cacheBannerText}>
+            Showing cached data — connect to internet for latest
+          </Text>
+        </View>
+      )}
       {error && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
@@ -130,6 +147,17 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
     marginBottom: 'auto',
   },
+  cacheBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fde68a',
+  },
+  cacheBannerText: { color: '#92400e', fontSize: 13, fontWeight: '500' },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',

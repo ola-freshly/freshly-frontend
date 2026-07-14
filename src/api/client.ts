@@ -18,14 +18,34 @@ client.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// Normalise errors into a consistent ApiError shape
+const MAX_RETRIES = 3;
+
+function isRetryable(status: number | undefined, error: AxiosError): boolean {
+  if (!status || status >= 500) return true;
+  if (!error.response) return true;
+  return false;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 client.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiError>) => {
+    const config = error.config as InternalAxiosRequestConfig & { _retryCount?: number };
+    if (!config || config._retryCount === undefined) config._retryCount = 0;
+
+    if (config._retryCount < MAX_RETRIES && isRetryable(error.response?.status, error)) {
+      config._retryCount += 1;
+      const delay = Math.min(1000 * 2 ** config._retryCount, 8000);
+      await sleep(delay);
+      return client(config);
+    }
+
     const status = error.response?.status;
 
-    if (status === 401 && !error.config?.url?.includes('/auth/refresh')) {
-      // Token expired — attempt silent refresh
+    if (status === 401 && !config.url?.includes('/auth/refresh')) {
       const refreshToken = await tokenStorage.getRefreshToken();
       if (refreshToken) {
         try {
@@ -35,10 +55,8 @@ client.interceptors.response.use(
           );
           await tokenStorage.setAccessToken(data.accessToken);
 
-          // Retry the original request with the new token
-          const originalRequest = error.config!;
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-          return client(originalRequest);
+          config.headers.Authorization = `Bearer ${data.accessToken}`;
+          return client(config);
         } catch {
           await tokenStorage.clearTokens();
           return Promise.reject<ApiError>({ message: 'Session expired', statusCode: 401 });
