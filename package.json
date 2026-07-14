@@ -32,8 +32,10 @@
     "validatorjs": "^3.22.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "29.5.14",
+    "@types/node": "^26.1.1",
     "@types/react": "~19.2.14",
     "@types/validatorjs": "^3.15.5",
     "eslint-config-expo": "~56.0.4",
@@ -53,10 +55,16 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"app/**/*.{ts,tsx}\"",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:ui": "playwright test --ui --project=chromium",
+    "test:api": "playwright test --project=api"
   },
-"private": true,
-"jest": {
-  "preset": "jest-expo"
-}
+  "private": true,
+  "jest": {
+    "preset": "jest-expo",
+    "testPathIgnorePatterns": [
+      "/e2e/"
+    ]
+  }
 }
