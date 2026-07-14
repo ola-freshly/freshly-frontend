@@ -33,6 +33,7 @@
     "validatorjs": "^3.22.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/react": "~19.2.14",
     "@types/validatorjs": "^3.15.5",
     "eslint-config-expo": "~56.0.4",
@@ -47,7 +48,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"app/**/*.{ts,tsx}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"app/**/*.{ts,tsx}\"",
+    "test:e2e:api": "playwright test"
   },
   "private": true
 }
