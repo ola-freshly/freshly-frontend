@@ -111,24 +111,21 @@ test.describe('POST /meal-plans/:id/generate', () => {
     });
   });
 
-  test(
-    'should AI-generate meals for a day',
-    async ({ request }) => {
-      const res = await request.post(`/meal-plans/${planId}/generate`, {
-        headers: authHeader(accessToken),
-        data: {
-          mealDate: '2026-07-22T00:00:00.000Z',
-          mealTypes: ['lunch'],
-        },
-      });
+  test('should AI-generate meals for a day', async ({ request }) => {
+    test.setTimeout(30_000);
+    const res = await request.post(`/meal-plans/${planId}/generate`, {
+      headers: authHeader(accessToken),
+      data: {
+        mealDate: '2026-07-22T00:00:00.000Z',
+        mealTypes: ['lunch'],
+      },
+    });
 
-      expect(res.status()).toBe(201);
-      const body = await res.json();
-      expect(body).toHaveProperty('items');
-      expect(body).toHaveProperty('shoppingList');
-      expect(Array.isArray(body.items)).toBe(true);
-      expect(body.items.length).toBe(1);
-    },
-    { timeout: 30_000 },
-  );
+    expect(res.status()).toBe(201);
+    const body = await res.json();
+    expect(body).toHaveProperty('items');
+    expect(body).toHaveProperty('shoppingList');
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.items.length).toBe(1);
+  });
 });

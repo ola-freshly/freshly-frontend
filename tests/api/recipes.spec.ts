@@ -99,19 +99,16 @@ test.describe('Recipes CRUD', () => {
 });
 
 test.describe('POST /recipes/generate', () => {
-  test(
-    'should AI-generate a recipe',
-    async ({ request }) => {
-      const res = await request.post('/recipes/generate', {
-        headers: authHeader(accessToken),
-        data: { servings: 2, cuisine: 'Italian', mealType: 'dinner' },
-      });
+  test('should AI-generate a recipe', async ({ request }) => {
+    test.setTimeout(30_000);
+    const res = await request.post('/recipes/generate', {
+      headers: authHeader(accessToken),
+      data: { servings: 2, cuisine: 'Italian', mealType: 'dinner' },
+    });
 
-      expect(res.status()).toBe(201);
-      const body = await res.json();
-      expect(body).toHaveProperty('title');
-      expect(body).toHaveProperty('instructions');
-    },
-    { timeout: 30_000 },
-  );
+    expect(res.status()).toBe(201);
+    const body = await res.json();
+    expect(body).toHaveProperty('title');
+    expect(body).toHaveProperty('instructions');
+  });
 });

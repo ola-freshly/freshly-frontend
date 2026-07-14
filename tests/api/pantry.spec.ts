@@ -85,22 +85,19 @@ test.describe('Pantry CRUD', () => {
 });
 
 test.describe('POST /pantry-items/scan-barcode', () => {
-  test(
-    'should scan a valid barcode',
-    async ({ request }) => {
-      const res = await request.post('/pantry-items/scan-barcode', {
-        headers: authHeader(accessToken),
-        data: { barcode: '3017620422003' },
-      });
+  test('should scan a valid barcode', async ({ request }) => {
+    test.setTimeout(15_000);
+    const res = await request.post('/pantry-items/scan-barcode', {
+      headers: authHeader(accessToken),
+      data: { barcode: '3017620422003' },
+    });
 
-      expect(res.status()).toBe(201);
-      const body = await res.json();
-      expect(body).toHaveProperty('name');
-      expect(body).toHaveProperty('category');
-      expect(body).toHaveProperty('confidence');
-    },
-    { timeout: 15_000 },
-  );
+    expect(res.status()).toBe(201);
+    const body = await res.json();
+    expect(body).toHaveProperty('name');
+    expect(body).toHaveProperty('category');
+    expect(body).toHaveProperty('confidence');
+  });
 
   test('should reject unknown barcode', async ({ request }) => {
     const res = await request.post('/pantry-items/scan-barcode', {
