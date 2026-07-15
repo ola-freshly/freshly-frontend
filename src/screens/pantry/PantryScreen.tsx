@@ -14,6 +14,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  FlatList
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ import { pantryApi } from '@/api/pantry';
 import { FoodCategory, PantryItemSource } from '@/api/types';
 import type { PantryItem } from '@/api/types';
 import { pantryCache } from '@/utils/pantryCache';
+import { usePantry } from '@/screens/pantry/use-pantry';
 
 const ACCENT = '#16A34A';
 const ACCENT_LIGHT = '#F0FDF4';
@@ -77,6 +79,65 @@ function expiryInfo(date?: string | null) {
 
 type Section = { slug: string; title: string; data: PantryItem[] };
 type SheetMode = 'add' | 'edit' | null;
-export default function PantryScreen(){
+export default function PantryScreen() {
+  const { items, loading, error, reload } = usePantry();
 
+  if (loading) return <Text style={{ padding: 60 }}>Loading…</Text>;
+  if (error)
+    return (
+      <Text style={{ padding: 60 }}>
+        {error} <Text onPress={reload}>Retry</Text>
+      </Text>
+    );
+  if (items.length === 0) return <Text style={{ padding: 60 }}>Empty</Text>;
+
+  const renderItem = ({ item }: { item: PantryItem }) => {
+    const meta = metaOf(slugOf(item));
+    const exp = expiryInfo(item.expiryDate);
+    return (
+      <Pressable style={styles.row}>
+        <View style={[styles.avatar, { backgroundColor: ACCENT_DIM }]}>
+          <Ionicons name={meta.icon} size={22} color={meta.tint} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rowTitle}>{item.name}</Text>
+          <Text style={styles.rowSub}>
+            {fmtQty(Number(item.quantity))} {item.unit}
+          </Text>
+        </View>
+        {exp && (
+          <View style={[styles.expBadge, { backgroundColor: exp.bg }]}>
+            <Text style={[styles.expText, { color: exp.color }]}>{exp.label}</Text>
+          </View>
+        )}
+        <Ionicons name="chevron-forward" size={20} color="#C4C4C4" />
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Pantry</Text>
+      <FlatList data={items} keyExtractor={(it) => it.id} renderItem={renderItem} />
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: 60 },
+  title: { fontSize: 28, fontWeight: '700', paddingHorizontal: 20, color: TEXT, marginBottom: 8 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BORDER,
+  },
+  avatar: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  rowTitle: { fontSize: 16, fontWeight: '600', color: TEXT },
+  rowSub: { fontSize: 13, color: MUTED, marginTop: 2 },
+  expBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  expText: { fontSize: 11, fontWeight: '700' },
+});
