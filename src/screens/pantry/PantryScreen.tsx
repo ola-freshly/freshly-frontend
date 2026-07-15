@@ -1,190 +1,82 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
+  Pressable,
+  SectionList,
   RefreshControl,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { pantryApi } from '@/api/pantry';
-import { pantryCache } from '@/utils/pantryCache';
+import { FoodCategory, PantryItemSource } from '@/api/types';
 import type { PantryItem } from '@/api/types';
+import { pantryCache } from '@/utils/pantryCache';
 
-export default function PantryScreen() {
-  const router = useRouter();
-  const [items, setItems] = useState<PantryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showingCached, setShowingCached] = useState(false);
+const ACCENT = '#16A34A';
+const ACCENT_LIGHT = '#F0FDF4';
+const ACCENT_DIM = '#DCFCE7';
+const BORDER = '#E5E7EB';
+const MUTED = '#6B7280';
+const TEXT = '#111827';
+const DANGER = '#DC2626';
 
-  const fetchItems = useCallback(async (isRefresh = false) => {
-    try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError(null);
-      setShowingCached(false);
-      const data = await pantryApi.getAll();
-      setItems(data);
-      pantryCache.set(data);
-    } catch (e: unknown) {
-      const cached = await pantryCache.get();
-      if (cached) {
-        setItems(cached);
-        setShowingCached(true);
-      } else {
-        const message = e instanceof Error ? e.message : 'Failed to load pantry items';
-        setError(message);
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+type Meta = { label: string; icon: keyof typeof Ionicons.glyphMap; tint: string };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchItems();
-    }, [fetchItems]),
-  );
+// Keyed by FoodCategory *values* (the backend slugs), so it's robust to enum names.
+const META: Record<string, Meta> = {
+  dairy: { label: 'Dairy & eggs', icon: 'egg-outline', tint: '#F59E0B' },
+  vegetable: { label: 'Vegetables', icon: 'leaf-outline', tint: '#16A34A' },
+  fruit: { label: 'Fruits', icon: 'nutrition-outline', tint: '#EF4444' },
+  meat: { label: 'Meat', icon: 'restaurant-outline', tint: '#B91C1C' },
+  seafood: { label: 'Seafood', icon: 'fish-outline', tint: '#0EA5E9' },
+  grain: { label: 'Grains', icon: 'flower-outline', tint: '#D97706' },
+  spice: { label: 'Spices', icon: 'flame-outline', tint: '#EA580C' },
+  beverage: { label: 'Beverages', icon: 'cafe-outline', tint: '#0D9488' },
+  snack: { label: 'Snacks', icon: 'fast-food-outline', tint: '#9333EA' },
+  condiment: { label: 'Condiments', icon: 'water-outline', tint: '#CA8A04' },
+  other: { label: 'Other', icon: 'cube-outline', tint: '#64748B' },
+};
 
-  const onRefresh = () => fetchItems(true);
+const CATEGORIES = Object.values(FoodCategory) as FoodCategory[];
+const DEFAULT_CAT = (CATEGORIES.find((c) => c === 'other') ??
+  CATEGORIES[CATEGORIES.length - 1]) as FoodCategory;
+const UNITS = ['pcs', 'g', 'kg', 'ml', 'l', 'can', 'pk', 'oz', 'lb', 'teaspoon', 'tablespoon'];
 
-  if (loading && !refreshing) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#208AEF" />
-      </View>
-    );
-  }
+const metaOf = (c?: string | null): Meta => META[c ?? 'other'] ?? META.other;
+const slugOf = (i: PantryItem): string => (i.category as string | undefined) ?? 'other';
+const asCategory = (c?: string | null): FoodCategory | undefined =>
+  CATEGORIES.includes(c as FoodCategory) ? (c as FoodCategory) : undefined;
+const fmtQty = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
-  return (
-    <View style={styles.container}>
-      {showingCached && (
-        <View style={styles.cacheBanner}>
-          <Text style={styles.cacheBannerText}>
-            Showing cached data — connect to internet for latest
-          </Text>
-        </View>
-      )}
-      {error && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>{error}</Text>
-          <TouchableOpacity onPress={() => fetchItems()}>
-            <Text style={styles.errorBannerRetry}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-      {items.length === 0 && !error ? (
-        <Text style={styles.empty}>No items in your pantry yet.</Text>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#208AEF" />
-          }
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/(app)/item-detail?id=${item.id}`)}
-            >
-              <View style={styles.cardBody}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemMeta}>
-                  {item.quantity} {item.unit}
-                  {item.category ? `  ·  ${item.category}` : ''}
-                </Text>
-                {item.expiryDate && (
-                  <Text style={styles.expiry}>
-                    Expires: {new Date(item.expiryDate).toLocaleDateString()}
-                  </Text>
-                )}
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-          )}
-        />
-      )}
-
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(app)/add-item')}>
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
-    </View>
-  );
+function expiryInfo(date?: string | null) {
+  if (!date) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const exp = new Date(date);
+  exp.setHours(0, 0, 0, 0);
+  if (Number.isNaN(exp.getTime())) return null;
+  const days = Math.round((exp.getTime() - now.getTime()) / 86_400_000);
+  if (days < 0) return { label: 'Expired', color: DANGER, bg: '#FEF2F2' };
+  if (days === 0) return { label: 'Today', color: DANGER, bg: '#FEF2F2' };
+  if (days <= 7) return { label: `${days}d left`, color: '#B45309', bg: '#FEF3C7' };
+  return null;
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-  list: { padding: 16, paddingBottom: 96 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 10,
-    backgroundColor: '#f9fafb',
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  cardBody: { flex: 1 },
-  itemName: { fontSize: 16, fontWeight: '600', color: '#333' },
-  itemMeta: { fontSize: 13, color: '#666', marginTop: 4 },
-  expiry: { fontSize: 12, color: '#999', marginTop: 2 },
-  chevron: { fontSize: 22, color: '#bbb', marginLeft: 8 },
-  empty: {
-    flex: 1,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    color: '#999',
-    fontSize: 16,
-    marginTop: 'auto',
-    marginBottom: 'auto',
-  },
-  cacheBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fef3c7',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#fde68a',
-  },
-  cacheBannerText: { color: '#92400e', fontSize: 13, fontWeight: '500' },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fef2f2',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#fecaca',
-  },
-  errorBannerText: { color: '#dc2626', fontSize: 13, flex: 1 },
-  errorBannerRetry: { color: '#208AEF', fontSize: 13, fontWeight: '600', marginLeft: 12 },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#208AEF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  fabText: { fontSize: 28, color: '#fff', lineHeight: 32 },
-});
+type Section = { slug: string; title: string; data: PantryItem[] };
+type SheetMode = 'add' | 'edit' | null;
+export default function PantryScreen(){
+
+}
