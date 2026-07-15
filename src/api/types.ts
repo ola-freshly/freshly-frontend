@@ -44,6 +44,8 @@ export interface RegisterRequest {
   password: string;
 }
 
+// ----- Recipes (from main) -----
+
 export interface Recipe {
   id: string;
   title: string;
@@ -76,4 +78,66 @@ export interface GeneratedRecipe {
   estimatedTime: number;
   servings: number;
   missingIngredients?: string[];
+}
+
+// ----- Pantry (from develop) -----
+
+export enum FoodCategory {
+  DAIRY = 'dairy',
+  VEGETABLE = 'vegetable',
+  FRUIT = 'fruit',
+  MEAT = 'meat',
+  SEAFOOD = 'seafood',
+  GRAIN = 'grain',
+  SPICE = 'spice',
+  BEVERAGE = 'beverage',
+  SNACK = 'snack',
+  CONDIMENT = 'condiment',
+  OTHER = 'other',
+}
+
+export enum PantryItemSource {
+  MANUAL = 'manual',
+  AI = 'ai',
+  BARCODE = 'barcode',
+}
+
+export interface PantryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  category?: FoodCategory;
+  barcode?: string;
+  imageUrl?: string;
+  purchaseDate?: string;
+  expiryDate?: string;
+  source: PantryItemSource;
+  usageInstruction?: string;
+  aiConfidence?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePantryItemDto {
+  name: string;
+  quantity: number;
+  unit: string;
+  category?: FoodCategory;
+  expiryDate?: string;
+  usageInstruction?: string;
+  source?: PantryItemSource;
+  imageUrl?: string;
+}
+
+export interface UpdatePantryItemDto extends Partial<CreatePantryItemDto> {
+  expiryDate?: string;
+}
+
+export interface ScanResult {
+  name: string;
+  category: string;
+  expirationDate: string | null;
+  usageInstruction: string | null;
+  confidence: number;
 }
