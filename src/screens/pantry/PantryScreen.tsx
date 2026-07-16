@@ -115,10 +115,28 @@ export default function PantryScreen() {
     );
   };
 
+  const sections=useMemo(()=>{
+    const map= new Map<string,PantryItem[]>();
+    for(const item of items) {
+      const s=slugOf(item);
+      if(!map.has(s)) map.set(s,[]);
+      map.get(s)!.push(item);
+    }
+    return [...map.keys()].map((s)=>({title:metaOf(s).label,data:map.get(s)!}))
+  },[items])
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Pantry</Text>
-      <FlatList data={items} keyExtractor={(it) => it.id} renderItem={renderItem} />
+      <SectionList
+        sections={sections}
+        keyExtractor={(it) => it.id}
+        renderItem={renderItem}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.sectionHeader}>{section.title}</Text>
+        )}
+        stickySectionHeadersEnabled={false}
+      />
     </View>
   );
 }
@@ -140,4 +158,5 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 13, color: MUTED, marginTop: 2 },
   expBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   expText: { fontSize: 11, fontWeight: '700' },
+  sectionHeader: {}
 });
