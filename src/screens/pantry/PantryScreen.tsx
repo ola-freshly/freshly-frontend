@@ -22,6 +22,7 @@ import { pantryApi } from '@/api/pantry';
 import { FoodCategory, PantryItemSource } from '@/api/types';
 import type { PantryItem } from '@/api/types';
 import { usePantry } from '@/screens/pantry/use-pantry';
+import { QuantityWheel } from '@/screens/pantry/quantity-wheel';
 
 const ACCENT = '#16A34A';
 const ACCENT_LIGHT = '#F0FDF4';
@@ -54,7 +55,15 @@ const DEFAULT_CAT = (CATEGORIES.find((c) => c === 'other') ??
 const UNITS = ['pcs', 'g', 'kg', 'ml', 'l', 'can', 'pk', 'oz', 'lb', 'teaspoon', 'tablespoon'];
 
 const metaOf = (c?: string | null): Meta => META[c ?? 'other'] ?? META.other;
-const slugOf = (i: PantryItem): string => (i.category as string | undefined) ?? 'other';
+// The backend returns `category` as a plain slug string in some responses and as
+// a relation object ({ id, name, slug }) after create/update — normalise both.
+const slugOf = (i: PantryItem): string => {
+  const c = i.category as unknown;
+  if (!c) return 'other';
+  if (typeof c === 'string') return c;
+  if (typeof c === 'object' && 'slug' in (c as object)) return String((c as { slug: string }).slug);
+  return 'other';
+};
 const asCategory = (c?: string | null): FoodCategory | undefined =>
   CATEGORIES.includes(c as FoodCategory) ? (c as FoodCategory) : undefined;
 const fmtQty = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
@@ -93,6 +102,7 @@ export default function PantryScreen() {
   } = usePantry();
 
   const [mode, setMode] = useState<SheetMode>(null);
+  const [step, setStep] = useState<1 | 2>(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -126,6 +136,7 @@ export default function PantryScreen() {
     setExpiry('');
     setUsage('');
     setScannedConfidence(null);
+    setStep(1);
     setMode('add');
   };
   const openEdit = (it: PantryItem) => {
@@ -133,13 +144,21 @@ export default function PantryScreen() {
     setName(it.name);
     setQuantity(fmtQty(Number(it.quantity)));
     setUnit(it.unit);
-    setCategory(asCategory(it.category as string) ?? DEFAULT_CAT);
+    setCategory(asCategory(slugOf(it)) ?? DEFAULT_CAT);
     setExpiry(it.expiryDate ? it.expiryDate.slice(0, 10) : '');
     setUsage(it.usageInstruction ?? '');
     setScannedConfidence(null);
+    setStep(1);
     setMode('edit');
   };
   const closeSheet = () => setMode(null);
+
+  // Step 1 → Step 2. Validate the fields captured on the first screen.
+  const goNext = () => {
+    if (!name.trim()) return Alert.alert('Name required', 'Please enter an item name.');
+    if (expiry && !ISO_DATE.test(expiry)) return Alert.alert('Invalid date', 'Use format YYYY-MM-DD.');
+    setStep(2);
+  };
 
   const runScan = async (asset: ImagePicker.ImagePickerAsset) => {
     setScanning(true);
@@ -358,110 +377,126 @@ export default function PantryScreen() {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
               <View style={styles.grabber} />
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                <View style={styles.sheetImageCircle}>
-                  {scanning ? (
-                    <ActivityIndicator color={ACCENT} />
-                  ) : (
-                    <Ionicons name={metaOf(category).icon} size={44} color={metaOf(category).tint} />
-                  )}
-                </View>
 
-                <Pressable style={styles.scanBtn} onPress={scanWithAI} disabled={scanning}>
-                  <Ionicons name="sparkles" size={16} color={ACCENT} />
-                  <Text style={styles.scanText}>{scanning ? 'Analysing photo…' : 'Scan with AI'}</Text>
-                </Pressable>
-                {scannedConfidence != null && (
-                  <Text style={styles.confidence}>
-                    AI filled these fields · {Math.round(scannedConfidence * 100)}% confident — review before saving
-                  </Text>
+              <View style={styles.sheetHeader}>
+                {step === 2 ? (
+                  <Pressable onPress={() => setStep(1)} hitSlop={10} style={styles.sheetHeaderBtn}>
+                    <Ionicons name="chevron-back" size={24} color={TEXT} />
+                  </Pressable>
+                ) : (
+                  <View style={styles.sheetHeaderBtn} />
                 )}
+                <Text style={styles.sheetTitle}>
+                  {mode === 'edit' ? 'Edit item' : 'New item'} · Step {step} of 2
+                </Text>
+                <View style={styles.sheetHeaderBtn} />
+              </View>
 
-                <Text style={styles.label}>Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="e.g. Eggs"
-                  placeholderTextColor="#9CA3AF"
-                />
+              <View style={styles.sheetImageCircle}>
+                {scanning ? (
+                  <ActivityIndicator color={ACCENT} />
+                ) : (
+                  <Ionicons name={metaOf(category).icon} size={44} color={metaOf(category).tint} />
+                )}
+              </View>
 
-                <Text style={styles.label}>Quantity</Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
+              {step === 1 ? (
+                <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                  <Pressable style={styles.scanBtn} onPress={scanWithAI} disabled={scanning}>
+                    <Ionicons name="sparkles" size={16} color={ACCENT} />
+                    <Text style={styles.scanText}>{scanning ? 'Analysing photo…' : 'Scan with AI'}</Text>
+                  </Pressable>
+                  {scannedConfidence != null && (
+                    <Text style={styles.confidence}>
+                      AI filled these fields · {Math.round(scannedConfidence * 100)}% confident — review before saving
+                    </Text>
+                  )}
+
+                  <Text style={styles.label}>Name</Text>
                   <TextInput
-                    style={[styles.input, { width: 96 }]}
-                    value={quantity}
-                    onChangeText={setQuantity}
-                    keyboardType="decimal-pad"
-                    placeholder="1"
+                    style={styles.input}
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="e.g. Milk"
                     placeholderTextColor="#9CA3AF"
                   />
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-                    <View style={styles.chipRow}>
-                      {UNITS.map((u) => (
-                        <Pressable
-                          key={u}
-                          onPress={() => setUnit(u)}
-                          style={[styles.chip, unit === u && styles.chipActive]}
-                        >
-                          <Text style={[styles.chipText, unit === u && styles.chipTextActive]}>{u}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </ScrollView>
-                </View>
 
-                <Text style={styles.label}>Category</Text>
-                <View style={styles.chipWrap}>
-                  {CATEGORIES.map((c) => (
-                    <Pressable
-                      key={c}
-                      onPress={() => setCategory(c)}
-                      style={[styles.chip, category === c && styles.chipActive]}
-                    >
-                      <Text style={[styles.chipText, category === c && styles.chipTextActive]}>
-                        {metaOf(c).label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                  <Text style={styles.label}>Category</Text>
+                  <View style={styles.chipWrap}>
+                    {CATEGORIES.map((c) => (
+                      <Pressable
+                        key={c}
+                        onPress={() => setCategory(c)}
+                        style={[styles.chip, category === c && styles.chipActive]}
+                      >
+                        <Text style={[styles.chipText, category === c && styles.chipTextActive]}>
+                          {metaOf(c).label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
 
-                <Text style={styles.label}>Expiry date (optional)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={expiry}
-                  onChangeText={setExpiry}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#9CA3AF"
-                  autoCapitalize="none"
-                  keyboardType="numbers-and-punctuation"
-                />
+                  <Text style={styles.label}>Expiry date (optional)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={expiry}
+                    onChangeText={setExpiry}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="none"
+                    keyboardType="numbers-and-punctuation"
+                  />
 
-                <Text style={styles.label}>Comment</Text>
-                <TextInput
-                  style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
-                  value={usage}
-                  onChangeText={setUsage}
-                  placeholder="Notes, usage, storage…"
-                  placeholderTextColor="#9CA3AF"
-                  multiline
-                />
+                  <Text style={styles.label}>Comment (optional)</Text>
+                  <TextInput
+                    style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
+                    value={usage}
+                    onChangeText={setUsage}
+                    placeholder="Notes, usage, storage…"
+                    placeholderTextColor="#9CA3AF"
+                    multiline
+                  />
 
-                <View style={styles.sheetActions}>
-                  {mode === 'edit' && (
-                    <Pressable style={styles.trashBtn} onPress={remove}>
-                      <Ionicons name="trash-outline" size={22} color={DANGER} />
-                    </Pressable>
-                  )}
-                  <Pressable style={[styles.saveBtn, saving && { opacity: 0.6 }]} onPress={save} disabled={saving}>
-                    {saving ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.saveText}>{mode === 'edit' ? 'Save changes' : 'Add to pantry'}</Text>
+                  <View style={styles.sheetActions}>
+                    {mode === 'edit' && (
+                      <Pressable style={styles.trashBtn} onPress={remove}>
+                        <Ionicons name="trash-outline" size={22} color={DANGER} />
+                      </Pressable>
                     )}
-                  </Pressable>
+                    <Pressable style={styles.saveBtn} onPress={goNext}>
+                      <Text style={styles.saveText}>Next</Text>
+                    </Pressable>
+                  </View>
+                </ScrollView>
+              ) : (
+                <View>
+                  <Text style={styles.quantityLabel}>
+                    How much {name.trim() || 'do you have'}?
+                  </Text>
+                  <QuantityWheel
+                    value={Number(quantity) || 0}
+                    unit={unit}
+                    units={UNITS}
+                    onChange={(v, u) => {
+                      setQuantity(String(v));
+                      setUnit(u);
+                    }}
+                  />
+                  <View style={[styles.sheetActions, { marginTop: 20 }]}>
+                    <Pressable
+                      style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+                      onPress={save}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={styles.saveText}>{mode === 'edit' ? 'Save changes' : 'Add to pantry'}</Text>
+                      )}
+                    </Pressable>
+                  </View>
                 </View>
-              </ScrollView>
+              )}
             </View>
           </KeyboardAvoidingView>
         </View>
@@ -585,6 +620,21 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 3,
     backgroundColor: '#D1D5DB',
+    marginBottom: 8,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  sheetHeaderBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  sheetTitle: { fontSize: 14, fontWeight: '600', color: MUTED },
+  quantityLabel: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    color: TEXT,
     marginBottom: 8,
   },
   sheetImageCircle: {
