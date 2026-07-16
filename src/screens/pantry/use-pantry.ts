@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { pantryApi } from '@/api/pantry';
-import type { PantryItem } from '@/api/types';
+import type { CreatePantryItemDto, PantryItem, UpdatePantryItemDto } from '@/api/types';
 import { pantryCache } from '@/utils/pantryCache';
 
 export function usePantry() {
@@ -41,5 +41,32 @@ export function usePantry() {
   useEffect(() => {
     load();
     },[load]);
-  return { items, loading, error,reload:load };
+
+  const addItem=useCallback(async (dto:CreatePantryItemDto) => {
+    const created=await pantryApi.create(dto);
+    setItems((prev)=>[created,...prev]);
+  },[]);
+
+  const editItem=useCallback(async(id:string,dto:UpdatePantryItemDto) => {
+    const updated=await pantryApi.update(id,dto);
+    setItems((prev)=>prev.map((i)=>(i.id===updated.id?updated:i)));
+  },[])
+
+  const deleteItem=useCallback(async (id:string) => {
+    await pantryApi.remove(id);
+    setItems((prev)=>prev.filter((i)=>i.id!==id));
+  },[])
+
+  return {
+    items,
+    loading,
+    refreshing,
+    error,
+    showingCached,
+    reload: () => load(false),
+    refresh: () => load(true),
+    addItem,
+    editItem,
+    deleteItem,
+  };
 }
