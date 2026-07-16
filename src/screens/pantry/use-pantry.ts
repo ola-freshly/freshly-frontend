@@ -34,6 +34,9 @@ export function usePantry() {
   }, []);
 
   useEffect(() => {
+    // Fetch-on-mount: load() sets state asynchronously after awaiting the API.
+    // The rule's syntactic trace can't see past the await, so this is a false positive.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 

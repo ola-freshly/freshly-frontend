@@ -62,7 +62,8 @@ export function usePantryForm() {
   // Step 1 → Step 2. Validates the fields captured on the first screen.
   const goNext = useCallback(() => {
     if (!name.trim()) return Alert.alert('Name required', 'Please enter an item name.');
-    if (expiry && !ISO_DATE.test(expiry)) return Alert.alert('Invalid date', 'Use format YYYY-MM-DD.');
+    if (expiry && !ISO_DATE.test(expiry))
+      return Alert.alert('Invalid date', 'Use format YYYY-MM-DD.');
     setStep(2);
   }, [name, expiry]);
 

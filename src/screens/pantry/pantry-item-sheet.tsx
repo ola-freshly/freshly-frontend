@@ -18,7 +18,17 @@ import { QuantityWheel } from './quantity-wheel';
 import { useImageScan } from './use-image-scan';
 import type { PantryForm } from './use-pantry-form';
 import { metaOf } from './pantry-utils';
-import { ACCENT, ACCENT_DIM, ACCENT_LIGHT, BORDER, CATEGORIES, DANGER, MUTED, TEXT, UNITS } from './pantry-theme';
+import {
+  ACCENT,
+  ACCENT_DIM,
+  ACCENT_LIGHT,
+  BORDER,
+  CATEGORIES,
+  DANGER,
+  MUTED,
+  TEXT,
+  UNITS,
+} from './pantry-theme';
 
 type Props = {
   form: PantryForm;
@@ -101,13 +111,20 @@ export function PantryItemSheet({ form, onSubmit, onDelete }: Props) {
 
             {step === 1 ? (
               <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                <Pressable style={styles.scanBtn} onPress={() => scan(applyScan)} disabled={scanning}>
+                <Pressable
+                  style={styles.scanBtn}
+                  onPress={() => scan(applyScan)}
+                  disabled={scanning}
+                >
                   <Ionicons name="sparkles" size={16} color={ACCENT} />
-                  <Text style={styles.scanText}>{scanning ? 'Analysing photo…' : 'Scan with AI'}</Text>
+                  <Text style={styles.scanText}>
+                    {scanning ? 'Analysing photo…' : 'Scan with AI'}
+                  </Text>
                 </Pressable>
                 {scannedConfidence != null && (
                   <Text style={styles.confidence}>
-                    AI filled these fields · {Math.round(scannedConfidence * 100)}% confident — review before saving
+                    AI filled these fields · {Math.round(scannedConfidence * 100)}% confident —
+                    review before saving
                   </Text>
                 )}
 
@@ -188,7 +205,9 @@ export function PantryItemSheet({ form, onSubmit, onDelete }: Props) {
                     {saving ? (
                       <ActivityIndicator color="#fff" />
                     ) : (
-                      <Text style={styles.saveText}>{mode === 'edit' ? 'Save changes' : 'Add to pantry'}</Text>
+                      <Text style={styles.saveText}>
+                        {mode === 'edit' ? 'Save changes' : 'Add to pantry'}
+                      </Text>
                     )}
                   </Pressable>
                 </View>

@@ -34,7 +34,9 @@ function Column({ data, index, onSelect, align = 'center', flex = 1 }: ColumnPro
 
   // Keep the scroll position aligned to the selected index (also positions on mount).
   useEffect(() => {
-    const id = requestAnimationFrame(() => ref.current?.scrollTo({ y: index * ITEM_H, animated: false }));
+    const id = requestAnimationFrame(() =>
+      ref.current?.scrollTo({ y: index * ITEM_H, animated: false }),
+    );
     return () => cancelAnimationFrame(id);
   }, [index]);
 
@@ -46,17 +48,22 @@ function Column({ data, index, onSelect, align = 'center', flex = 1 }: ColumnPro
 
   return (
     <ScrollView
+      bounces={true}
+      overScrollMode="always"
       ref={ref}
       style={{ flex }}
       showsVerticalScrollIndicator={false}
       snapToInterval={ITEM_H}
-      decelerationRate="fast"
+      decelerationRate="normal"
       onMomentumScrollEnd={settle}
       onScrollEndDrag={settle}
       contentContainerStyle={{ paddingVertical: PAD }}
     >
       {data.map((d, i) => (
-        <View key={`${d}-${i}`} style={{ height: ITEM_H, justifyContent: 'center', alignItems: align }}>
+        <View
+          key={`${d}-${i}`}
+          style={{ height: ITEM_H, justifyContent: 'center', alignItems: align }}
+        >
           <Text style={[styles.item, i === index && styles.itemActive]}>{d}</Text>
         </View>
       ))}
@@ -88,9 +95,25 @@ export function QuantityWheel({
   return (
     <View style={styles.wheel}>
       <View style={styles.highlight} pointerEvents="none" />
-      <Column data={WHOLES} index={whole} align="flex-end" onSelect={(i) => compose(i, decIdx, unitIdx)} />
-      <Column data={DECIMALS} index={decIdx} align="center" onSelect={(i) => compose(whole, i, unitIdx)} />
-      <Column data={units} index={unitIdx} flex={1.6} align="flex-start" onSelect={(i) => compose(whole, decIdx, i)} />
+      <Column
+        data={WHOLES}
+        index={whole}
+        align="flex-end"
+        onSelect={(i) => compose(i, decIdx, unitIdx)}
+      />
+      <Column
+        data={DECIMALS}
+        index={decIdx}
+        align="center"
+        onSelect={(i) => compose(whole, i, unitIdx)}
+      />
+      <Column
+        data={units}
+        index={unitIdx}
+        flex={1.6}
+        align="flex-start"
+        onSelect={(i) => compose(whole, decIdx, i)}
+      />
     </View>
   );
 }

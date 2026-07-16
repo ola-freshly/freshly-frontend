@@ -1,5 +1,13 @@
 import { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, SectionList, RefreshControl, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  SectionList,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { PantryItemSource } from '@/api/types';
@@ -8,12 +16,29 @@ import { usePantryForm } from '@/screens/pantry/use-pantry-form';
 import { PantryRow } from '@/screens/pantry/pantry-row';
 import { PantryItemSheet } from '@/screens/pantry/pantry-item-sheet';
 import { buildSections } from '@/screens/pantry/pantry-utils';
-import { ACCENT, ACCENT_DIM, ACCENT_LIGHT, DANGER, MUTED, TEXT } from '@/screens/pantry/pantry-theme';
+import {
+  ACCENT,
+  ACCENT_DIM,
+  ACCENT_LIGHT,
+  DANGER,
+  MUTED,
+  TEXT,
+} from '@/screens/pantry/pantry-theme';
 
 export default function PantryScreen() {
   const insets = useSafeAreaInsets();
-  const { items, loading, refreshing, error, showingCached, reload, refresh, addItem, editItem, deleteItem } =
-    usePantry();
+  const {
+    items,
+    loading,
+    refreshing,
+    error,
+    showingCached,
+    reload,
+    refresh,
+    addItem,
+    editItem,
+    deleteItem,
+  } = usePantry();
   const form = usePantryForm();
 
   const sections = useMemo(() => buildSections(items), [items]);
@@ -78,7 +103,9 @@ export default function PantryScreen() {
 
       {showingCached && (
         <View style={styles.cacheBanner}>
-          <Text style={styles.cacheBannerText}>Showing cached data — connect to internet for latest</Text>
+          <Text style={styles.cacheBannerText}>
+            Showing cached data — connect to internet for latest
+          </Text>
         </View>
       )}
       {error && (
@@ -97,13 +124,20 @@ export default function PantryScreen() {
         sections={sections}
         keyExtractor={(it) => it.id}
         renderItem={({ item }) => <PantryRow item={item} onPress={() => form.openEdit(item)} />}
-        renderSectionHeader={({ section }) => <Text style={styles.sectionHeader}>{section.title}</Text>}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.sectionHeader}>{section.title}</Text>
+        )}
         stickySectionHeadersEnabled={false}
         contentContainerStyle={
           sections.length === 0 ? styles.emptyWrap : { paddingBottom: insets.bottom + 96 }
         }
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={ACCENT} colors={[ACCENT]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={ACCENT}
+            colors={[ACCENT]}
+          />
         }
         ListEmptyComponent={
           !error ? (
@@ -112,7 +146,9 @@ export default function PantryScreen() {
                 <Ionicons name="basket-outline" size={40} color={ACCENT} />
               </View>
               <Text style={styles.emptyTitle}>Your pantry is empty</Text>
-              <Text style={styles.emptySub}>Add items to start tracking what you have at home.</Text>
+              <Text style={styles.emptySub}>
+                Add items to start tracking what you have at home.
+              </Text>
               <Pressable style={styles.emptyBtn} onPress={form.openAdd}>
                 <Ionicons name="add" size={18} color="#fff" />
                 <Text style={styles.emptyBtnText}>Add your first item</Text>

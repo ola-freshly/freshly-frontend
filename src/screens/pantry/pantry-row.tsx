@@ -52,6 +52,11 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontSize: 16, fontWeight: '600', color: TEXT },
   rowSub: { fontSize: 13, color: MUTED, marginTop: 2 },
-  expBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderCurve: 'continuous' },
+  expBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderCurve: 'continuous',
+  },
   expText: { fontSize: 11, fontWeight: '700' },
 });

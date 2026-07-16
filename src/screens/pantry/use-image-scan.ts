@@ -46,7 +46,10 @@ export function useImageScan() {
           onPress: async () => {
             const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (!perm.granted) return Alert.alert('Photo access needed', 'Enable it in Settings.');
-            const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+            const res = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              quality: 0.7,
+            });
             if (!res.canceled && res.assets[0]) analyse(res.assets[0], onResult);
           },
         },

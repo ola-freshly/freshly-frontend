@@ -30,4 +30,16 @@ export const META: Record<string, CategoryMeta> = {
 export const CATEGORIES = Object.values(FoodCategory) as FoodCategory[];
 export const DEFAULT_CAT = (CATEGORIES.find((c) => c === 'other') ??
   CATEGORIES[CATEGORIES.length - 1]) as FoodCategory;
-export const UNITS = ['pcs', 'g', 'kg', 'ml', 'l', 'can', 'pk', 'oz', 'lb', 'teaspoon', 'tablespoon'];
+export const UNITS = [
+  'pcs',
+  'g',
+  'kg',
+  'ml',
+  'l',
+  'can',
+  'pk',
+  'oz',
+  'lb',
+  'teaspoon',
+  'tablespoon',
+];
