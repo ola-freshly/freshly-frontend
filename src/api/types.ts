@@ -56,13 +56,20 @@ export interface Recipe {
   ingredients: string[];
 }
 
+export interface RecipeIngredientInput {
+  ingredientName: string;
+  quantity?: number;
+  unit?: string;
+}
+
 export interface CreateRecipeRequest {
   title: string;
   description?: string;
+  cuisine?: string;
   instructions: string;
   servings?: number;
-  estimatedTime?: number;
-  ingredients: string[];
+  cookTime?: number;
+  ingredients: RecipeIngredientInput[];
 }
 
 export interface GenerateRecipeRequest {

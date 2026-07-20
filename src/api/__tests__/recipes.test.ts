@@ -37,8 +37,14 @@ describe('recipesApi', () => {
   it('creates a recipe', async () => {
     const payload = {
       title: 'Chicken Pasta',
-      instructions: 'Cook and serve.',
-      ingredients: ['chicken', 'pasta'],
+      description: 'Weeknight favourite.',
+      instructions: '1. Cook pasta.\n2. Add chicken and serve.',
+      servings: 2,
+      cookTime: 30,
+      ingredients: [
+        { ingredientName: 'chicken', quantity: 200, unit: 'g' },
+        { ingredientName: 'pasta' },
+      ],
     };
 
     const createdRecipe = {
