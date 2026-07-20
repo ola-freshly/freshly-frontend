@@ -2,10 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 
 import { recipesApi } from '@/api';
 import DropdownField, { type DropdownOption } from '@/components/DropdownField';
 import FeedbackModal from '@/components/FeedbackModal';
+import { notifyError, notifySuccess, tapLight } from '@/utils/haptics';
 
 const ACCENT = '#16A34A';
 const ACCENT_LIGHT = '#F0FDF4';
@@ -80,13 +82,18 @@ export default function CreateRecipeScreen() {
   };
 
   // ----- Ingredient rows -----
-  const addIngredient = () => setIngredients((rows) => [...rows, emptyIngredient()]);
+  const addIngredient = () => {
+    tapLight();
+    setIngredients((rows) => [...rows, emptyIngredient()]);
+  };
 
   const updateIngredient = (id: string, field: keyof IngredientRow, value: string) =>
     setIngredients((rows) => rows.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
 
-  const removeIngredient = (id: string) =>
+  const removeIngredient = (id: string) => {
+    tapLight();
     setIngredients((rows) => (rows.length > 1 ? rows.filter((row) => row.id !== id) : rows));
+  };
 
   const addPastedIngredients = () => {
     const parsed = ingredientPaste
@@ -97,6 +104,7 @@ export default function CreateRecipeScreen() {
 
     if (parsed.length === 0) return;
 
+    tapLight();
     setIngredients((rows) => {
       const existing = rows.filter((row) => row.name.trim());
       return [...existing, ...parsed];
@@ -105,13 +113,18 @@ export default function CreateRecipeScreen() {
   };
 
   // ----- Instruction steps -----
-  const addStep = () => setSteps((rows) => [...rows, emptyStep()]);
+  const addStep = () => {
+    tapLight();
+    setSteps((rows) => [...rows, emptyStep()]);
+  };
 
   const updateStep = (id: string, value: string) =>
     setSteps((rows) => rows.map((row) => (row.id === id ? { ...row, text: value } : row)));
 
-  const removeStep = (id: string) =>
+  const removeStep = (id: string) => {
+    tapLight();
     setSteps((rows) => (rows.length > 1 ? rows.filter((row) => row.id !== id) : rows));
+  };
 
   const addPastedSteps = () => {
     const parsed = stepPaste
@@ -122,6 +135,7 @@ export default function CreateRecipeScreen() {
 
     if (parsed.length === 0) return;
 
+    tapLight();
     setSteps((rows) => {
       const existing = rows.filter((row) => row.text.trim());
       return [...existing, ...parsed];
@@ -137,6 +151,7 @@ export default function CreateRecipeScreen() {
 
   const handleSave = async () => {
     if (!title.trim() || cleanIngredients.length === 0 || cleanSteps.length === 0) {
+      notifyError();
       showFeedback(
         'Missing information',
         'Please add a title, at least one ingredient, and at least one step.',
@@ -146,6 +161,7 @@ export default function CreateRecipeScreen() {
     }
 
     try {
+      tapLight();
       setLoading(true);
 
       await recipesApi.createRecipe({
@@ -164,8 +180,10 @@ export default function CreateRecipeScreen() {
       });
 
       setShouldGoBack(true);
+      notifySuccess();
       showFeedback('Recipe created', 'Your recipe has been saved.', 'success');
     } catch {
+      notifyError();
       showFeedback(
         'Unable to create recipe',
         'Please check your connection and try again.',
@@ -200,6 +218,7 @@ export default function CreateRecipeScreen() {
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
       >
         {/* Title */}
@@ -231,7 +250,12 @@ export default function CreateRecipeScreen() {
         </TouchableOpacity>
 
         {ingredients.map((row) => (
-          <View key={row.id} style={styles.rowCard}>
+          <Animated.View
+            key={row.id}
+            style={styles.rowCard}
+            entering={FadeInDown.springify().damping(15)}
+            exiting={FadeOut.duration(150)}
+          >
             <TextInput
               style={[styles.rowInput, styles.rowName]}
               placeholder="Ingredient"
@@ -261,7 +285,7 @@ export default function CreateRecipeScreen() {
             >
               <Ionicons name="close" size={18} color="#6B7280" />
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         ))}
 
         <View style={styles.pasteBox}>
@@ -288,7 +312,12 @@ export default function CreateRecipeScreen() {
         </TouchableOpacity>
 
         {steps.map((row, index) => (
-          <View key={row.id} style={styles.rowCard}>
+          <Animated.View
+            key={row.id}
+            style={styles.rowCard}
+            entering={FadeInDown.springify().damping(15)}
+            exiting={FadeOut.duration(150)}
+          >
             <Text style={styles.stepNumber}>{index + 1}</Text>
             <TextInput
               style={[styles.rowInput, styles.stepInput]}
@@ -305,7 +334,7 @@ export default function CreateRecipeScreen() {
             >
               <Ionicons name="close" size={18} color="#6B7280" />
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         ))}
 
         <View style={styles.pasteBox}>
@@ -370,6 +399,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 12,
+    borderCurve: 'continuous',
     padding: 14,
     fontSize: 15,
     color: '#111827',
@@ -390,6 +420,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 999,
     marginBottom: 14,
+    boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)',
   },
   addPillText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
@@ -403,6 +434,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 12,
+    borderCurve: 'continuous',
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 15,
@@ -434,6 +466,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 12,
+    borderCurve: 'continuous',
     backgroundColor: '#F9FAFB',
     padding: 12,
   },
@@ -458,6 +491,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 20,
     borderRadius: 999,
+    boxShadow: '0 3px 10px rgba(22, 163, 74, 0.3)',
   },
   savePillText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   disabled: { opacity: 0.6 },

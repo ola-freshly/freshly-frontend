@@ -50,10 +50,16 @@ export interface Recipe {
   id: string;
   title: string;
   description?: string;
+  cuisine?: string;
   instructions: string;
   servings?: number;
-  estimatedTime?: number;
-  ingredients: string[];
+  cookTime?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  // Only populated by GET /recipes/:id (findOne), not the list endpoint.
+  ingredients?: RecipeIngredientInput[];
 }
 
 export interface RecipeIngredientInput {

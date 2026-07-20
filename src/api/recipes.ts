@@ -17,6 +17,10 @@ export const recipesApi = {
     return data;
   },
 
+  async deleteRecipe(id: string): Promise<void> {
+    await client.delete(`/recipes/${id}`);
+  },
+
   async generateRecipe(payload: GenerateRecipeRequest): Promise<GeneratedRecipe> {
     const { data } = await client.post<GeneratedRecipe>('/recipes/generate', payload);
     return data;

@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text } from 'react-native';
 
+import { tapLight } from '@/utils/haptics';
+
 const ACCENT = '#16A34A';
 const ACCENT_LIGHT = '#F0FDF4';
 
@@ -48,6 +50,7 @@ export default function DropdownField({
                   <Pressable
                     style={[styles.option, isSelected && styles.optionSelected]}
                     onPress={() => {
+                      tapLight();
                       onSelect(item.value);
                       setOpen(false);
                     }}
@@ -75,6 +78,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 12,
+    borderCurve: 'continuous',
     paddingHorizontal: 14,
     paddingVertical: 14,
     backgroundColor: '#F9FAFB',
@@ -95,6 +99,7 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: '#fff',
     borderRadius: 16,
+    borderCurve: 'continuous',
     maxHeight: '60%',
     overflow: 'hidden',
   },
