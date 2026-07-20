@@ -22,7 +22,10 @@ export const recipesApi = {
   },
 
   async generateRecipe(payload: GenerateRecipeRequest): Promise<GeneratedRecipe> {
-    const { data } = await client.post<GeneratedRecipe>('/recipes/generate', payload);
+    // AI generation runs longer than the client's 10s default; give it room.
+    const { data } = await client.post<GeneratedRecipe>('/recipes/generate', payload, {
+      timeout: 45_000,
+    });
     return data;
   },
 };
