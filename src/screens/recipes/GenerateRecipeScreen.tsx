@@ -3,6 +3,7 @@ import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -46,6 +47,10 @@ export default function GenerateRecipeScreen() {
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<GeneratedRecipe | null>(null);
 
+  // Regeneration requires the user to clarify what to change (see openRefine).
+  const [refineVisible, setRefineVisible] = useState(false);
+  const [refineText, setRefineText] = useState('');
+
   const [feedback, setFeedback] = useState<FeedbackState>({
     visible: false,
     title: '',
@@ -75,8 +80,7 @@ export default function GenerateRecipeScreen() {
 
   const closeFeedback = () => setFeedback((c) => ({ ...c, visible: false }));
 
-  const handleGenerate = async () => {
-    tapLight();
+  const runGenerate = async (notesValue: string) => {
     try {
       setLoading(true);
       setPreview(null);
@@ -84,7 +88,7 @@ export default function GenerateRecipeScreen() {
         mealType: mealType ?? undefined,
         cuisine: cuisine.trim() || undefined,
         servings,
-        notes: notes.trim() || undefined,
+        notes: notesValue.trim() || undefined,
       });
       setPreview(recipe);
     } catch {
@@ -96,6 +100,32 @@ export default function GenerateRecipeScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // First generation uses whatever is in the form's "Extra details" field.
+  const handleGenerate = () => {
+    tapLight();
+    void runGenerate(notes);
+  };
+
+  // Regeneration is deliberate: the user must clarify what to change. Tapping
+  // "Generate another" opens a prompt — we never regenerate without new details.
+  const openRefine = () => {
+    tapLight();
+    setRefineText('');
+    setRefineVisible(true);
+  };
+
+  const submitRefine = () => {
+    const extra = refineText.trim();
+    if (!extra) return; // required — the button is disabled, this is a safety net
+    tapLight();
+    // Accumulate the clarification into notes so the AI keeps prior context and
+    // the form reflects the refinement history.
+    const combined = [notes.trim(), extra].filter(Boolean).join('. ');
+    setNotes(combined);
+    setRefineVisible(false);
+    void runGenerate(combined);
   };
 
   const handleSave = async () => {
@@ -277,7 +307,7 @@ export default function GenerateRecipeScreen() {
         {/* Preview */}
         {preview ? (
           <Animated.View
-            entering={FadeInDown.springify().damping(18)}
+            entering={FadeInDown.springify().damping(30)}
             exiting={FadeOut}
             style={styles.previewCard}
           >
@@ -353,7 +383,7 @@ export default function GenerateRecipeScreen() {
                 style={[styles.secondaryBtn, styles.flex1, loading && styles.disabled]}
                 activeOpacity={0.85}
                 disabled={loading}
-                onPress={handleGenerate}
+                onPress={openRefine}
               >
                 {loading ? (
                   <ActivityIndicator color={ACCENT} />
@@ -368,6 +398,53 @@ export default function GenerateRecipeScreen() {
           </Animated.View>
         ) : null}
       </ScrollView>
+
+      {/* Regeneration prompt — the user must clarify what to change first. */}
+      <Modal
+        visible={refineVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRefineVisible(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.refineCard}>
+            <Text style={styles.refineTitle}>What should we change?</Text>
+            <Text style={styles.refineSubtitle}>
+              Add more detail so the AI can improve the recipe — e.g. “make it vegetarian”, “less
+              spicy”, or “use the chicken before it expires”.
+            </Text>
+
+            <TextInput
+              style={styles.refineInput}
+              placeholder="Describe what to change…"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              autoFocus
+              value={refineText}
+              onChangeText={setRefineText}
+            />
+
+            <View style={styles.refineActions}>
+              <TouchableOpacity
+                style={[styles.secondaryBtn, styles.flex1]}
+                activeOpacity={0.85}
+                onPress={() => setRefineVisible(false)}
+              >
+                <Text style={styles.secondaryBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryBtn, styles.flex1, !refineText.trim() && styles.disabled]}
+                activeOpacity={0.85}
+                disabled={!refineText.trim()}
+                onPress={submitRefine}
+              >
+                <Ionicons name="sparkles" size={18} color="#fff" />
+                <Text style={styles.primaryBtnText}>Regenerate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <FeedbackModal
         visible={feedback.visible}
@@ -576,4 +653,36 @@ const styles = StyleSheet.create({
   stepText: { flex: 1, fontSize: 14, color: '#374151', lineHeight: 21 },
 
   previewActions: { flexDirection: 'row', gap: 12, marginTop: 22 },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  refineCard: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderCurve: 'continuous',
+    padding: 22,
+  },
+  refineTitle: { fontSize: 19, fontWeight: '700', color: '#111827' },
+  refineSubtitle: { marginTop: 6, fontSize: 14, color: '#6B7280', lineHeight: 20 },
+  refineInput: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    borderCurve: 'continuous',
+    padding: 14,
+    fontSize: 15,
+    color: '#111827',
+    backgroundColor: '#F9FAFB',
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  refineActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
 });

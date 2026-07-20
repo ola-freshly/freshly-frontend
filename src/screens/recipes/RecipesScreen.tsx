@@ -108,9 +108,9 @@ export default function RecipesScreen() {
         }
         renderItem={({ item, index }) => (
           <Animated.View
-            entering={FadeInDown.delay(index * 60)
+            entering={FadeInDown.delay(index * 30)
               .springify()
-              .damping(18)}
+              .damping(30)}
           >
             <TouchableOpacity
               style={styles.card}

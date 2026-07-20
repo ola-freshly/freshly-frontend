@@ -26,9 +26,7 @@ describe('previewToCreateRequest', () => {
   });
 
   it('joins instructions with newlines', () => {
-    expect(previewToCreateRequest(preview).instructions).toBe(
-      'Cook the rice\nFry everything',
-    );
+    expect(previewToCreateRequest(preview).instructions).toBe('Cook the rice\nFry everything');
   });
 
   it('copies nutrition fields', () => {

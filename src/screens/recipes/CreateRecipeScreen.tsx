@@ -253,7 +253,7 @@ export default function CreateRecipeScreen() {
           <Animated.View
             key={row.id}
             style={styles.rowCard}
-            entering={FadeInDown.springify().damping(15)}
+            entering={FadeInDown.springify().damping(30)}
             exiting={FadeOut.duration(150)}
           >
             <TextInput
@@ -315,7 +315,7 @@ export default function CreateRecipeScreen() {
           <Animated.View
             key={row.id}
             style={styles.rowCard}
-            entering={FadeInDown.springify().damping(15)}
+            entering={FadeInDown.springify().damping(30)}
             exiting={FadeOut.duration(150)}
           >
             <Text style={styles.stepNumber}>{index + 1}</Text>
