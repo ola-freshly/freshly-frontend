@@ -1,9 +1,31 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router, Stack } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 
-import { recipesApi } from '@/api';
+import { pantryApi, recipesApi } from '@/api';
+import type { GeneratedRecipe, PantryItem } from '@/api';
 import FeedbackModal from '@/components/FeedbackModal';
-import type { GeneratedRecipe } from '@/api';
+import { MEALS, type MealType } from '@/screens/mealplan/theme';
+import { previewToCreateRequest } from '@/screens/recipes/recipe-mapping';
+import { tapLight } from '@/utils/haptics';
+
+const ACCENT = '#16A34A';
+const ACCENT_LIGHT = '#F0FDF4';
+const ACCENT_DIM = '#DCFCE7';
+const DANGER = '#DC2626';
+
+const CUISINES = ['Italian', 'Asian', 'Mexican', 'Indian', 'Mediterranean'];
 
 type FeedbackState = {
   visible: boolean;
@@ -13,10 +35,21 @@ type FeedbackState = {
 };
 
 export default function GenerateRecipeScreen() {
-  const [pantryItems, setPantryItems] = useState('');
-  const [preferences, setPreferences] = useState('');
+  const [pantry, setPantry] = useState<PantryItem[]>([]);
+  const [pantryLoading, setPantryLoading] = useState(true);
+
+  const [mealType, setMealType] = useState<MealType | null>(null);
+  const [cuisine, setCuisine] = useState('');
+  const [servings, setServings] = useState(2);
+  const [notes, setNotes] = useState('');
+
   const [loading, setLoading] = useState(false);
-  const [generatedRecipe, setGeneratedRecipe] = useState<GeneratedRecipe | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState<GeneratedRecipe | null>(null);
+
+  // Regeneration requires the user to clarify what to change (see openRefine).
+  const [refineVisible, setRefineVisible] = useState(false);
+  const [refineText, setRefineText] = useState('');
 
   const [feedback, setFeedback] = useState<FeedbackState>({
     visible: false,
@@ -25,55 +58,43 @@ export default function GenerateRecipeScreen() {
     type: 'success',
   });
 
-  const showFeedback = (title: string, message: string, type: 'success' | 'error') => {
-    setFeedback({
-      visible: true,
-      title,
-      message,
-      type,
-    });
-  };
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const items = await pantryApi.getAll();
+        if (active) setPantry(items);
+      } catch {
+        // Non-fatal: the generator still works; the AI lists everything as missing.
+      } finally {
+        if (active) setPantryLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const closeFeedback = () => {
-    setFeedback((current) => ({
-      ...current,
-      visible: false,
-    }));
-  };
+  const showFeedback = (title: string, message: string, type: 'success' | 'error') =>
+    setFeedback({ visible: true, title, message, type });
 
-  const handleGenerate = async () => {
-    if (!pantryItems.trim()) {
-      showFeedback(
-        'Missing pantry items',
-        'Please enter pantry items before generating a recipe.',
-        'error',
-      );
-      return;
-    }
+  const closeFeedback = () => setFeedback((c) => ({ ...c, visible: false }));
 
+  const runGenerate = async (notesValue: string) => {
     try {
       setLoading(true);
-      setGeneratedRecipe(null);
-
+      setPreview(null);
       const recipe = await recipesApi.generateRecipe({
-        pantryItems: pantryItems
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean),
-        preferences: preferences.trim() || undefined,
+        mealType: mealType ?? undefined,
+        cuisine: cuisine.trim() || undefined,
+        servings,
+        notes: notesValue.trim() || undefined,
       });
-
-      setGeneratedRecipe(recipe);
-
-      showFeedback(
-        'Recipe generated',
-        'Your AI recipe is ready. You can review and edit it below.',
-        'success',
-      );
+      setPreview(recipe);
     } catch {
       showFeedback(
         'Unable to generate recipe',
-        'Please check your connection and try again.',
+        'The AI could not create a recipe right now. Please check your connection and try again.',
         'error',
       );
     } finally {
@@ -81,144 +102,349 @@ export default function GenerateRecipeScreen() {
     }
   };
 
+  // First generation uses whatever is in the form's "Extra details" field.
+  const handleGenerate = () => {
+    tapLight();
+    void runGenerate(notes);
+  };
+
+  // Regeneration is deliberate: the user must clarify what to change. Tapping
+  // "Generate another" opens a prompt — we never regenerate without new details.
+  const openRefine = () => {
+    tapLight();
+    setRefineText('');
+    setRefineVisible(true);
+  };
+
+  const submitRefine = () => {
+    const extra = refineText.trim();
+    if (!extra) return; // required — the button is disabled, this is a safety net
+    tapLight();
+    // Accumulate the clarification into notes so the AI keeps prior context and
+    // the form reflects the refinement history.
+    const combined = [notes.trim(), extra].filter(Boolean).join('. ');
+    setNotes(combined);
+    setRefineVisible(false);
+    void runGenerate(combined);
+  };
+
+  const handleSave = async () => {
+    if (!preview) return;
+    tapLight();
+    try {
+      setSaving(true);
+      const saved = await recipesApi.createRecipe(previewToCreateRequest(preview));
+      router.replace({ pathname: '/recipe-detail', params: { id: saved.id } });
+    } catch {
+      showFeedback('Unable to save recipe', 'Please try again.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>AI Recipe Generator</Text>
-        <Text style={styles.subtitle}>
-          Enter your pantry items and preferences to generate a recipe.
-        </Text>
+      <Stack.Screen
+        options={{
+          title: 'AI Recipe Generator',
+          headerTitleAlign: 'left',
+          headerTintColor: '#111827',
+          headerStyle: { backgroundColor: '#fff' },
+          headerShadowVisible: false,
+        }}
+      />
 
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Pantry items, separated by commas"
-          multiline
-          value={pantryItems}
-          onChangeText={setPantryItems}
-        />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.intro}>
+          <View style={styles.introIcon}>
+            <Ionicons name="sparkles" size={20} color={ACCENT} />
+          </View>
+          <Text style={styles.subtitle}>
+            Tell us what you feel like — we&apos;ll cook something from your pantry.
+          </Text>
+        </View>
 
+        {/* Pantry preview */}
+        <View style={styles.pantryCard}>
+          <View style={styles.pantryHeader}>
+            <Ionicons name="basket-outline" size={16} color={ACCENT} />
+            <Text style={styles.pantryTitle}>Cooking from your pantry</Text>
+          </View>
+          {pantryLoading ? (
+            <ActivityIndicator color={ACCENT} style={styles.pantrySpinner} />
+          ) : pantry.length ? (
+            <View style={styles.chipRow}>
+              {pantry.slice(0, 12).map((p) => (
+                <View key={p.id} style={styles.pantryChip}>
+                  <Text style={styles.pantryChipText}>{p.name}</Text>
+                </View>
+              ))}
+              {pantry.length > 12 ? (
+                <View style={styles.pantryChip}>
+                  <Text style={styles.pantryChipText}>+{pantry.length - 12} more</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <Text style={styles.pantryEmpty}>
+              Your pantry is empty — the recipe will list everything you&apos;ll need to buy.
+            </Text>
+          )}
+        </View>
+
+        {/* Meal type */}
+        <Text style={styles.label}>Meal type</Text>
+        <View style={styles.chipRow}>
+          {MEALS.map((m) => {
+            const selected = mealType === m.type;
+            return (
+              <TouchableOpacity
+                key={m.type}
+                style={[styles.mealChip, selected && styles.mealChipSelected]}
+                activeOpacity={0.85}
+                onPress={() => {
+                  tapLight();
+                  setMealType(selected ? null : m.type);
+                }}
+              >
+                <Ionicons name={m.icon} size={16} color={selected ? '#fff' : m.color} />
+                <Text style={[styles.mealChipText, selected && styles.mealChipTextSelected]}>
+                  {m.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Cuisine */}
+        <Text style={styles.label}>Cuisine</Text>
         <TextInput
           style={styles.input}
-          placeholder="Preferences, cuisine, or allergies"
-          value={preferences}
-          onChangeText={setPreferences}
+          placeholder="e.g. Italian, Thai (optional)"
+          placeholderTextColor="#9CA3AF"
+          value={cuisine}
+          onChangeText={setCuisine}
+        />
+        <View style={styles.chipRow}>
+          {CUISINES.map((c) => {
+            const selected = cuisine.trim().toLowerCase() === c.toLowerCase();
+            return (
+              <TouchableOpacity
+                key={c}
+                style={[styles.suggestChip, selected && styles.suggestChipSelected]}
+                activeOpacity={0.85}
+                onPress={() => {
+                  tapLight();
+                  setCuisine(selected ? '' : c);
+                }}
+              >
+                <Text style={[styles.suggestChipText, selected && styles.suggestChipTextSelected]}>
+                  {c}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Servings */}
+        <Text style={styles.label}>Servings</Text>
+        <View style={styles.stepper}>
+          <TouchableOpacity
+            style={styles.stepBtn}
+            activeOpacity={0.85}
+            onPress={() => {
+              tapLight();
+              setServings((s) => Math.max(1, s - 1));
+            }}
+          >
+            <Ionicons name="remove" size={20} color={ACCENT} />
+          </TouchableOpacity>
+          <Text style={styles.stepValue}>{servings}</Text>
+          <TouchableOpacity
+            style={styles.stepBtn}
+            activeOpacity={0.85}
+            onPress={() => {
+              tapLight();
+              setServings((s) => Math.min(12, s + 1));
+            }}
+          >
+            <Ionicons name="add" size={20} color={ACCENT} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Notes */}
+        <Text style={styles.label}>Extra details</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="e.g. high protein, no dairy, make it spicy (optional)"
+          placeholderTextColor="#9CA3AF"
+          multiline
+          value={notes}
+          onChangeText={setNotes}
         />
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.disabled]}
+          style={[styles.primaryBtn, loading && styles.disabled]}
+          activeOpacity={0.85}
           disabled={loading}
           onPress={handleGenerate}
         >
-          <Text style={styles.buttonText}>{loading ? 'Generating...' : 'Generate Recipe'}</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="sparkles" size={18} color="#fff" />
+              <Text style={styles.primaryBtnText}>Generate Recipe</Text>
+            </>
+          )}
         </TouchableOpacity>
 
-        {generatedRecipe ? (
-          <View style={styles.resultCard}>
-            <TextInput
-              style={styles.resultTitle}
-              value={generatedRecipe.title}
-              onChangeText={(value) =>
-                setGeneratedRecipe((current) => (current ? { ...current, title: value } : current))
-              }
-            />
+        {/* Preview */}
+        {preview ? (
+          <Animated.View
+            entering={FadeInDown.springify().damping(30)}
+            exiting={FadeOut}
+            style={styles.previewCard}
+          >
+            <Text style={styles.previewTitle} selectable>
+              {preview.title}
+            </Text>
+            {preview.description ? (
+              <Text style={styles.previewDesc}>{preview.description}</Text>
+            ) : null}
 
-            <TextInput
-              style={[styles.resultInput, styles.resultTextArea]}
-              value={generatedRecipe.description ?? ''}
-              placeholder="Description"
-              multiline
-              onChangeText={(value) =>
-                setGeneratedRecipe((current) =>
-                  current ? { ...current, description: value } : current,
-                )
-              }
-            />
-
-            <Text style={styles.label}>Ingredients</Text>
-
-            <TextInput
-              style={[styles.resultInput, styles.resultTextArea]}
-              value={generatedRecipe.ingredients.join(', ')}
-              multiline
-              onChangeText={(value) =>
-                setGeneratedRecipe((current) =>
-                  current
-                    ? {
-                        ...current,
-                        ingredients: value
-                          .split(',')
-                          .map((item) => item.trim())
-                          .filter(Boolean),
-                      }
-                    : current,
-                )
-              }
-            />
-
-            <Text style={styles.label}>Instructions</Text>
-
-            <TextInput
-              style={[styles.resultInput, styles.instructionsInput]}
-              value={generatedRecipe.instructions}
-              multiline
-              onChangeText={(value) =>
-                setGeneratedRecipe((current) =>
-                  current ? { ...current, instructions: value } : current,
-                )
-              }
-            />
-
-            <View style={styles.detailsRow}>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Time</Text>
-                <TextInput
-                  style={styles.detailInput}
-                  keyboardType="number-pad"
-                  value={String(generatedRecipe.estimatedTime)}
-                  onChangeText={(value) =>
-                    setGeneratedRecipe((current) =>
-                      current
-                        ? {
-                            ...current,
-                            estimatedTime: Number(value) || 0,
-                          }
-                        : current,
-                    )
-                  }
-                />
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={16} color={ACCENT} />
+                <Text style={styles.metaText}>{preview.estimatedMinutes} min</Text>
               </View>
-
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Servings</Text>
-                <TextInput
-                  style={styles.detailInput}
-                  keyboardType="number-pad"
-                  value={String(generatedRecipe.servings)}
-                  onChangeText={(value) =>
-                    setGeneratedRecipe((current) =>
-                      current
-                        ? {
-                            ...current,
-                            servings: Number(value) || 0,
-                          }
-                        : current,
-                    )
-                  }
-                />
+              <View style={styles.metaItem}>
+                <Ionicons name="people-outline" size={16} color={ACCENT} />
+                <Text style={styles.metaText}>{preview.servings} servings</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="flame-outline" size={16} color={ACCENT} />
+                <Text style={styles.metaText}>{Math.round(preview.nutrition.calories)} kcal</Text>
               </View>
             </View>
 
-            {generatedRecipe.missingIngredients?.length ? (
+            <Text style={styles.sectionLabel}>Ingredients</Text>
+            {preview.ingredients.map((i, idx) => (
+              <Text key={`ing-${idx}`} style={styles.listItem} selectable>
+                • {i.quantity} {i.unit} {i.name}
+              </Text>
+            ))}
+
+            {preview.missingIngredients.length ? (
               <View style={styles.missingCard}>
-                <Text style={styles.missingTitle}>Missing ingredients</Text>
-                <Text style={styles.missingText}>
-                  {generatedRecipe.missingIngredients.join(', ')}
-                </Text>
+                <Text style={styles.missingTitle}>You&apos;ll need to buy</Text>
+                {preview.missingIngredients.map((i, idx) => (
+                  <Text key={`miss-${idx}`} style={styles.missingText} selectable>
+                    • {i.quantity} {i.unit} {i.name}
+                  </Text>
+                ))}
               </View>
             ) : null}
-          </View>
+
+            <Text style={styles.sectionLabel}>Instructions</Text>
+            {preview.instructions.map((step, idx) => (
+              <View key={`step-${idx}`} style={styles.stepRow}>
+                <View style={styles.stepNum}>
+                  <Text style={styles.stepNumText}>{idx + 1}</Text>
+                </View>
+                <Text style={styles.stepText} selectable>
+                  {step}
+                </Text>
+              </View>
+            ))}
+
+            <View style={styles.previewActions}>
+              <TouchableOpacity
+                style={[styles.primaryBtn, styles.flex1, saving && styles.disabled]}
+                activeOpacity={0.85}
+                disabled={saving}
+                onPress={handleSave}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="bookmark-outline" size={18} color="#fff" />
+                    <Text style={styles.primaryBtnText}>Save recipe</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.secondaryBtn, styles.flex1, loading && styles.disabled]}
+                activeOpacity={0.85}
+                disabled={loading}
+                onPress={openRefine}
+              >
+                {loading ? (
+                  <ActivityIndicator color={ACCENT} />
+                ) : (
+                  <>
+                    <Ionicons name="refresh" size={18} color={ACCENT} />
+                    <Text style={styles.secondaryBtnText}>Generate another</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         ) : null}
       </ScrollView>
+
+      {/* Regeneration prompt — the user must clarify what to change first. */}
+      <Modal
+        visible={refineVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRefineVisible(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.refineCard}>
+            <Text style={styles.refineTitle}>What should we change?</Text>
+            <Text style={styles.refineSubtitle}>
+              Add more detail so the AI can improve the recipe — e.g. “make it vegetarian”, “less
+              spicy”, or “use the chicken before it expires”.
+            </Text>
+
+            <TextInput
+              style={styles.refineInput}
+              placeholder="Describe what to change…"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              autoFocus
+              value={refineText}
+              onChangeText={setRefineText}
+            />
+
+            <View style={styles.refineActions}>
+              <TouchableOpacity
+                style={[styles.secondaryBtn, styles.flex1]}
+                activeOpacity={0.85}
+                onPress={() => setRefineVisible(false)}
+              >
+                <Text style={styles.secondaryBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryBtn, styles.flex1, !refineText.trim() && styles.disabled]}
+                activeOpacity={0.85}
+                disabled={!refineText.trim()}
+                onPress={submitRefine}
+              >
+                <Ionicons name="sparkles" size={18} color="#fff" />
+                <Text style={styles.primaryBtnText}>Regenerate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <FeedbackModal
         visible={feedback.visible}
@@ -232,126 +458,231 @@ export default function GenerateRecipeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1, backgroundColor: '#fff' },
+  content: { padding: 20, paddingBottom: 48 },
+  flex1: { flex: 1 },
+
+  intro: { flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 20 },
+  introIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: ACCENT_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subtitle: { flex: 1, color: '#6B7280', fontSize: 14, lineHeight: 20 },
+
+  pantryCard: {
+    backgroundColor: ACCENT_LIGHT,
+    borderColor: ACCENT_DIM,
+    borderWidth: 1,
+    borderRadius: 14,
+    borderCurve: 'continuous',
+    padding: 14,
+    marginBottom: 22,
+  },
+  pantryHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  pantryTitle: { fontSize: 13, fontWeight: '700', color: ACCENT },
+  pantrySpinner: { marginTop: 4, alignSelf: 'flex-start' },
+  pantryChip: {
+    backgroundColor: '#fff',
+    borderColor: ACCENT_DIM,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  pantryChipText: { fontSize: 12, color: '#166534', fontWeight: '600' },
+  pantryEmpty: { fontSize: 13, color: '#6B7280', lineHeight: 19 },
+
+  label: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 10 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+
+  mealChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 999,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
     backgroundColor: '#fff',
   },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  subtitle: {
-    marginTop: 6,
-    marginBottom: 24,
-    color: '#6b7280',
-    fontSize: 15,
-    lineHeight: 22,
-  },
+  mealChipSelected: { backgroundColor: ACCENT, borderColor: ACCENT },
+  mealChipText: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  mealChipTextSelected: { color: '#fff' },
+
   input: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
+    borderCurve: 'continuous',
     padding: 14,
-    marginBottom: 16,
     fontSize: 15,
-    backgroundColor: '#f9fafb',
+    color: '#111827',
+    backgroundColor: '#F9FAFB',
+    marginBottom: 12,
   },
-  textArea: {
-    minHeight: 120,
-    textAlignVertical: 'top',
+  textArea: { minHeight: 90, textAlignVertical: 'top', marginBottom: 20 },
+
+  suggestChip: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    backgroundColor: '#fff',
   },
-  button: {
-    backgroundColor: '#208AEF',
+  suggestChipSelected: { backgroundColor: ACCENT_DIM, borderColor: ACCENT },
+  suggestChipText: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  suggestChipTextSelected: { color: '#166534' },
+
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    borderCurve: 'continuous',
+    padding: 6,
+    marginBottom: 20,
+  },
+  stepBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    borderCurve: 'continuous',
+    backgroundColor: ACCENT_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    minWidth: 24,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
+
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: ACCENT,
     paddingVertical: 15,
     borderRadius: 12,
+    borderCurve: 'continuous',
+  },
+  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  secondaryBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: ACCENT_LIGHT,
+    borderWidth: 1,
+    borderColor: ACCENT_DIM,
+    paddingVertical: 15,
+    borderRadius: 12,
+    borderCurve: 'continuous',
   },
-  disabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  resultCard: {
-    marginTop: 24,
+  secondaryBtnText: { color: ACCENT, fontWeight: '700', fontSize: 15 },
+  disabled: { opacity: 0.6 },
+
+  previewCard: {
+    marginTop: 26,
     padding: 18,
     borderRadius: 16,
-    backgroundColor: '#f3f4f6',
-  },
-  resultTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-    borderBottomWidth: 1,
-    borderBottomColor: '#d1d5db',
-    paddingBottom: 10,
-    marginBottom: 14,
-  },
-  resultInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    padding: 12,
+    borderCurve: 'continuous',
     backgroundColor: '#fff',
-    fontSize: 15,
-    color: '#374151',
+    borderWidth: 1,
+    borderColor: ACCENT_DIM,
   },
-  resultTextArea: {
-    minHeight: 90,
-    textAlignVertical: 'top',
-    marginBottom: 16,
+  previewTitle: { fontSize: 20, fontWeight: '700', color: '#111827' },
+  previewDesc: { marginTop: 6, color: '#6B7280', fontSize: 14, lineHeight: 20 },
+  metaRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 14,
+    marginBottom: 6,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  instructionsInput: {
-    minHeight: 140,
-    textAlignVertical: 'top',
-    marginBottom: 16,
-  },
-  label: {
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaText: { fontSize: 13, fontWeight: '600', color: '#374151' },
+
+  sectionLabel: {
     fontSize: 15,
     fontWeight: '700',
     color: '#111827',
+    marginTop: 16,
     marginBottom: 8,
   },
-  detailsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  detailItem: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 6,
-  },
-  detailInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    padding: 12,
-    backgroundColor: '#fff',
-  },
+  listItem: { fontSize: 14, color: '#374151', lineHeight: 22 },
+
   missingCard: {
-    marginTop: 16,
-    borderRadius: 10,
+    marginTop: 12,
+    borderRadius: 12,
+    borderCurve: 'continuous',
     padding: 14,
-    backgroundColor: '#fef2f2',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
   },
-  missingTitle: {
-    color: '#b91c1c',
-    fontWeight: '700',
+  missingTitle: { color: DANGER, fontWeight: '700', marginBottom: 4 },
+  missingText: { color: '#991B1B', fontSize: 14, lineHeight: 21 },
+
+  stepRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  stepNum: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: ACCENT_DIM,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
   },
-  missingText: {
-    marginTop: 4,
-    color: '#991b1b',
-    lineHeight: 20,
+  stepNumText: { fontSize: 12, fontWeight: '700', color: '#166534' },
+  stepText: { flex: 1, fontSize: 14, color: '#374151', lineHeight: 21 },
+
+  previewActions: { flexDirection: 'row', gap: 12, marginTop: 22 },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
   },
+  refineCard: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderCurve: 'continuous',
+    padding: 22,
+  },
+  refineTitle: { fontSize: 19, fontWeight: '700', color: '#111827' },
+  refineSubtitle: { marginTop: 6, fontSize: 14, color: '#6B7280', lineHeight: 20 },
+  refineInput: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    borderCurve: 'continuous',
+    padding: 14,
+    fontSize: 15,
+    color: '#111827',
+    backgroundColor: '#F9FAFB',
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  refineActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
 });

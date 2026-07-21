@@ -1,74 +1,111 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
+  Pressable,
+  SectionList,
   RefreshControl,
+  Alert,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { pantryApi } from '@/api/pantry';
-import { pantryCache } from '@/utils/pantryCache';
-import { pantryEvents } from '@/utils/pantryEvents';
-import { getErrorMessage } from '@/utils/apiError';
-import type { PantryItem } from '@/api/types';
+import { useFocusEffect } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorBar } from '@/components/ErrorBar';
+import { PantryItemSource } from '@/api/types';
+import { usePantry } from '@/screens/pantry/use-pantry';
+import { usePantryForm } from '@/screens/pantry/use-pantry-form';
+import { PantryRow } from '@/screens/pantry/pantry-row';
+import { PantryItemSheet } from '@/screens/pantry/pantry-item-sheet';
+import { buildSections } from '@/screens/pantry/pantry-utils';
+import { ACCENT, ACCENT_LIGHT, MUTED, TEXT } from '@/screens/pantry/pantry-theme';
 
 export default function PantryScreen() {
-  const router = useRouter();
-  const [items, setItems] = useState<PantryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showingCached, setShowingCached] = useState(false);
+  const insets = useSafeAreaInsets();
+  const {
+    items,
+    loading,
+    refreshing,
+    error,
+    showingCached,
+    reload,
+    refresh,
+    addItem,
+    editItem,
+    deleteItem,
+  } = usePantry();
+  const form = usePantryForm();
 
-  const fetchItems = useCallback(async (isRefresh = false) => {
-    try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError(null);
-      setShowingCached(false);
-      const data = await pantryApi.getAll();
-      setItems(data);
-      pantryCache.set(data);
-    } catch (e: unknown) {
-      const cached = await pantryCache.get();
-      if (cached) {
-        setItems(cached);
-        setShowingCached(true);
-      } else {
-        setError(getErrorMessage(e, 'Failed to load pantry items'));
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
+  // Reload on focus so the list re-mounts each visit — this both keeps the
+  // pantry fresh and replays the row entrance animation, matching RecipesScreen.
   useFocusEffect(
     useCallback(() => {
-      fetchItems();
-    }, [fetchItems]),
+      reload();
+    }, [reload]),
   );
 
-  useEffect(() => {
-    const unsubscribe = pantryEvents.subscribe(() => fetchItems());
-    return unsubscribe;
-  }, [fetchItems]);
+  const sections = useMemo(() => buildSections(items), [items]);
 
-  const onRefresh = () => fetchItems(true);
+  const submit = async () => {
+    const dto = form.buildDto();
+    if (!dto) return;
+    try {
+      if (form.mode === 'edit' && form.editingId) {
+        await editItem(form.editingId, dto);
+      } else {
+        await addItem({
+          ...dto,
+          source: form.scannedConfidence != null ? PantryItemSource.AI : PantryItemSource.MANUAL,
+        });
+      }
+      form.close();
+    } catch (e) {
+      Alert.alert('Save failed', e instanceof Error ? e.message : 'Could not save the item.');
+    }
+  };
+
+  const removeCurrent = async () => {
+    if (!form.editingId) return;
+    try {
+      await deleteItem(form.editingId);
+      form.close();
+    } catch (e) {
+      Alert.alert('Delete failed', e instanceof Error ? e.message : 'Could not delete the item.');
+    }
+  };
+
+  const Header = (
+    <View style={[styles.header, { paddingTop: insets.top }]}>
+      <Text style={styles.headerTitle}>Pantry</Text>
+      <Text style={styles.headerCount}>
+        {items.length} item{items.length === 1 ? '' : 's'}
+      </Text>
+    </View>
+  );
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#208AEF" />
+      <View style={styles.container}>
+        {Header}
+        {[...Array(6)].map((_, i) => (
+          <View key={i} style={styles.skeletonRow}>
+            <View style={[styles.skeletonAvatar, styles.skeleton]} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <View style={[styles.skeleton, { height: 14, width: '55%', borderRadius: 6 }]} />
+              <View style={[styles.skeleton, { height: 11, width: '30%', borderRadius: 6 }]} />
+            </View>
+          </View>
+        ))}
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      {Header}
+
       {showingCached && (
         <View style={styles.cacheBanner}>
           <Text style={styles.cacheBannerText}>
@@ -76,121 +113,100 @@ export default function PantryScreen() {
           </Text>
         </View>
       )}
-      {error && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>{error}</Text>
-          <TouchableOpacity onPress={() => fetchItems()}>
-            <Text style={styles.errorBannerRetry}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {error && <ErrorBar message={error} onRetry={reload} />}
 
-      {items.length === 0 && !error ? (
-        <Text style={styles.empty}>No items in your pantry yet.</Text>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#208AEF" />
-          }
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/(app)/item-detail?id=${item.id}`)}
-            >
-              <View style={styles.cardBody}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemMeta}>
-                  {item.quantity} {item.unit}
-                  {item.category ? `  ·  ${item.category}` : ''}
-                </Text>
-                {item.expiryDate && (
-                  <Text style={styles.expiry}>
-                    Expires: {new Date(item.expiryDate).toLocaleDateString()}
-                  </Text>
-                )}
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-          )}
-        />
-      )}
+      <SectionList
+        sections={sections}
+        keyExtractor={(it) => it.id}
+        renderItem={({ item, index }) => (
+          <Animated.View
+            entering={FadeInDown.delay(index * 30)
+              .springify()
+              .damping(30)}
+          >
+            <PantryRow item={item} onPress={() => form.openEdit(item)} />
+          </Animated.View>
+        )}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.sectionHeader}>{section.title}</Text>
+        )}
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={
+          sections.length === 0 ? styles.emptyWrap : { paddingBottom: insets.bottom + 96 }
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={ACCENT}
+            colors={[ACCENT]}
+          />
+        }
+        ListEmptyComponent={
+          !error ? (
+            <EmptyState
+              icon="basket-outline"
+              title="Your pantry is empty"
+              subtitle="Add items to start tracking what you have at home."
+              actionLabel="Add your first item"
+              onAction={form.openAdd}
+            />
+          ) : null
+        }
+      />
 
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(app)/add-item')}>
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+      <Pressable style={[styles.fab, { bottom: insets.bottom + 24 }]} onPress={form.openAdd}>
+        <Ionicons name="add" size={30} color="#fff" />
+      </Pressable>
+
+      <PantryItemSheet form={form} onSubmit={submit} onDelete={removeCurrent} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-  list: { padding: 16, paddingBottom: 96 },
-  card: {
+  header: { paddingHorizontal: 20, paddingBottom: 12 },
+  headerTitle: { fontSize: 28, fontWeight: '700', color: TEXT },
+  headerCount: { fontSize: 14, color: MUTED, marginTop: 2 },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: ACCENT,
+    backgroundColor: ACCENT_LIGHT,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  skeletonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 10,
-    backgroundColor: '#f9fafb',
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
-  cardBody: { flex: 1 },
-  itemName: { fontSize: 16, fontWeight: '600', color: '#333' },
-  itemMeta: { fontSize: 13, color: '#666', marginTop: 4 },
-  expiry: { fontSize: 12, color: '#999', marginTop: 2 },
-  chevron: { fontSize: 22, color: '#bbb', marginLeft: 8 },
-  empty: {
-    flex: 1,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    color: '#999',
-    fontSize: 16,
-    marginTop: 'auto',
-    marginBottom: 'auto',
-  },
+  skeletonAvatar: { width: 46, height: 46, borderRadius: 23 },
+  skeleton: { backgroundColor: '#ECECEC' },
   cacheBanner: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fef3c7',
+    backgroundColor: '#FEF3C7',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#fde68a',
+    borderBottomColor: '#FDE68A',
   },
-  cacheBannerText: { color: '#92400e', fontSize: 13, fontWeight: '500' },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fef2f2',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#fecaca',
-  },
-  errorBannerText: { color: '#dc2626', fontSize: 13, flex: 1 },
-  errorBannerRetry: { color: '#208AEF', fontSize: 13, fontWeight: '600', marginLeft: 12 },
+  cacheBannerText: { color: '#92400E', fontSize: 13, fontWeight: '500' },
+  // The list centers the shared <EmptyState /> via this container.
+  emptyWrap: { flexGrow: 1, justifyContent: 'center' },
   fab: {
     position: 'absolute',
-    bottom: 24,
     right: 24,
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#208AEF',
+    backgroundColor: ACCENT,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
   },
-  fabText: { fontSize: 28, color: '#fff', lineHeight: 32 },
 });

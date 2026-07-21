@@ -50,34 +50,68 @@ export interface Recipe {
   id: string;
   title: string;
   description?: string;
+  cuisine?: string;
   instructions: string;
   servings?: number;
-  estimatedTime?: number;
-  ingredients: string[];
+  cookTime?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  // Only populated by GET /recipes/:id (findOne), not the list endpoint.
+  ingredients?: RecipeIngredientInput[];
+}
+
+export interface RecipeIngredientInput {
+  ingredientName: string;
+  quantity?: number;
+  unit?: string;
 }
 
 export interface CreateRecipeRequest {
   title: string;
   description?: string;
+  cuisine?: string;
   instructions: string;
   servings?: number;
-  estimatedTime?: number;
-  ingredients: string[];
+  cookTime?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  ingredients: RecipeIngredientInput[];
 }
 
 export interface GenerateRecipeRequest {
-  pantryItems: string[];
-  preferences?: string;
+  mealType?: string;
+  cuisine?: string;
+  servings?: number;
+  notes?: string;
+}
+
+export interface GeneratedIngredient {
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
+export interface GeneratedRecipeNutrition {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
 }
 
 export interface GeneratedRecipe {
   title: string;
-  description?: string;
-  ingredients: string[];
-  instructions: string;
-  estimatedTime: number;
+  description: string;
+  cuisine?: string | null;
   servings: number;
-  missingIngredients?: string[];
+  estimatedMinutes: number;
+  ingredients: GeneratedIngredient[];
+  instructions: string[];
+  nutrition: GeneratedRecipeNutrition;
+  missingIngredients: GeneratedIngredient[];
 }
 
 // ----- Pantry (from develop) -----
