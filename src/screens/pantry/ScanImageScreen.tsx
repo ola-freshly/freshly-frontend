@@ -14,6 +14,7 @@ import { pantryApi } from '@/api/pantry';
 import { FoodCategory, PantryItemSource } from '@/api/types';
 import type { ScanResult } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
+import { getErrorMessage } from '@/utils/apiError';
 import * as ImagePicker from 'expo-image-picker';
 
 const CATEGORIES = Object.values(FoodCategory);
@@ -77,7 +78,7 @@ export default function ScanImageScreen() {
       setEditExpiry(data.expirationDate ?? '');
       setEditInstruction(data.usageInstruction ?? '');
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Scan failed';
+      const message = getErrorMessage(e, 'Scan failed');
       setError(message);
       showToastError(message);
     } finally {
@@ -104,8 +105,7 @@ export default function ScanImageScreen() {
       showToastSuccess('Item saved to pantry');
       router.back();
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to save';
-      showToastError(message);
+      showToastError(getErrorMessage(e, 'Failed to save'));
     } finally {
       setSubmitting(false);
     }

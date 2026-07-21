@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,22 +8,20 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorBar } from '@/components/ErrorBar';
+import { getErrorMessage } from '@/utils/apiError';
 import { PantryItemSource } from '@/api/types';
 import { usePantry } from '@/screens/pantry/use-pantry';
 import { usePantryForm } from '@/screens/pantry/use-pantry-form';
 import { PantryRow } from '@/screens/pantry/pantry-row';
 import { PantryItemSheet } from '@/screens/pantry/pantry-item-sheet';
 import { buildSections } from '@/screens/pantry/pantry-utils';
-import {
-  ACCENT,
-  ACCENT_DIM,
-  ACCENT_LIGHT,
-  DANGER,
-  MUTED,
-  TEXT,
-} from '@/screens/pantry/pantry-theme';
+import { ACCENT, ACCENT_LIGHT, MUTED, TEXT } from '@/screens/pantry/pantry-theme';
 
 export default function PantryScreen() {
   const insets = useSafeAreaInsets();
@@ -41,6 +39,14 @@ export default function PantryScreen() {
   } = usePantry();
   const form = usePantryForm();
 
+  // Reload on focus so the list re-mounts each visit — this both keeps the
+  // pantry fresh and replays the row entrance animation, matching RecipesScreen.
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload]),
+  );
+
   const sections = useMemo(() => buildSections(items), [items]);
 
   const submit = async () => {
@@ -57,7 +63,7 @@ export default function PantryScreen() {
       }
       form.close();
     } catch (e) {
-      Alert.alert('Save failed', e instanceof Error ? e.message : 'Could not save the item.');
+      Alert.alert('Save failed', getErrorMessage(e, 'Could not save the item.'));
     }
   };
 
@@ -67,12 +73,12 @@ export default function PantryScreen() {
       await deleteItem(form.editingId);
       form.close();
     } catch (e) {
-      Alert.alert('Delete failed', e instanceof Error ? e.message : 'Could not delete the item.');
+      Alert.alert('Delete failed', getErrorMessage(e, 'Could not delete the item.'));
     }
   };
 
   const Header = (
-    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       <Text style={styles.headerTitle}>Pantry</Text>
       <Text style={styles.headerCount}>
         {items.length} item{items.length === 1 ? '' : 's'}
@@ -108,22 +114,20 @@ export default function PantryScreen() {
           </Text>
         </View>
       )}
-      {error && (
-        <View style={styles.errorBar}>
-          <Ionicons name="alert-circle-outline" size={18} color={DANGER} />
-          <Text style={styles.errorText} selectable>
-            {error}
-          </Text>
-          <Pressable onPress={reload} hitSlop={8}>
-            <Text style={styles.retry}>Retry</Text>
-          </Pressable>
-        </View>
-      )}
+      {error && <ErrorBar message={error} onRetry={reload} />}
 
       <SectionList
         sections={sections}
         keyExtractor={(it) => it.id}
-        renderItem={({ item }) => <PantryRow item={item} onPress={() => form.openEdit(item)} />}
+        renderItem={({ item, index }) => (
+          <Animated.View
+            entering={FadeInDown.delay(index * 30)
+              .springify()
+              .damping(30)}
+          >
+            <PantryRow item={item} onPress={() => form.openEdit(item)} />
+          </Animated.View>
+        )}
         renderSectionHeader={({ section }) => (
           <Text style={styles.sectionHeader}>{section.title}</Text>
         )}
@@ -141,19 +145,13 @@ export default function PantryScreen() {
         }
         ListEmptyComponent={
           !error ? (
-            <View style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="basket-outline" size={40} color={ACCENT} />
-              </View>
-              <Text style={styles.emptyTitle}>Your pantry is empty</Text>
-              <Text style={styles.emptySub}>
-                Add items to start tracking what you have at home.
-              </Text>
-              <Pressable style={styles.emptyBtn} onPress={form.openAdd}>
-                <Ionicons name="add" size={18} color="#fff" />
-                <Text style={styles.emptyBtnText}>Add your first item</Text>
-              </Pressable>
-            </View>
+            <EmptyState
+              icon="basket-outline"
+              title="Your pantry is empty"
+              subtitle="Add items to start tracking what you have at home."
+              actionLabel="Add your first item"
+              onAction={form.openAdd}
+            />
           ) : null
         }
       />
@@ -199,44 +197,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#FDE68A',
   },
   cacheBannerText: { color: '#92400E', fontSize: 13, fontWeight: '500' },
-  errorBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 4,
-    padding: 12,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 10,
-    borderCurve: 'continuous',
-  },
-  errorText: { flex: 1, color: DANGER, fontSize: 13 },
-  retry: { color: DANGER, fontWeight: '700', fontSize: 13 },
+  // The list centers the shared <EmptyState /> via this container.
   emptyWrap: { flexGrow: 1, justifyContent: 'center' },
-  empty: { alignItems: 'center', paddingHorizontal: 40, gap: 8 },
-  emptyIcon: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: ACCENT_DIM,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: TEXT },
-  emptySub: { fontSize: 14, color: MUTED, textAlign: 'center' },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 16,
-    backgroundColor: ACCENT,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 24,
-    borderCurve: 'continuous',
-  },
-  emptyBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   fab: {
     position: 'absolute',
     right: 24,

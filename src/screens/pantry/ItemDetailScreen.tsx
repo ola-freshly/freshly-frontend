@@ -6,18 +6,24 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  ScrollView,
   StyleSheet,
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
+import { FoodCategory } from '@/api/types';
 import type { PantryItem } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
+import { getErrorMessage } from '@/utils/apiError';
+
+const CATEGORIES = Object.values(FoodCategory);
 
 interface EditForm {
   name: string;
   quantity: string;
   unit: string;
+  category: FoodCategory | '';
   expiryDate: string;
   usageInstruction: string;
 }
@@ -33,6 +39,7 @@ export default function ItemDetailScreen() {
     name: '',
     quantity: '',
     unit: '',
+    category: '',
     expiryDate: '',
     usageInstruction: '',
   });
@@ -48,7 +55,7 @@ export default function ItemDetailScreen() {
         const data = await pantryApi.getById(id);
         setItem(data);
       } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : 'Failed to load item';
+        const message = getErrorMessage(e, 'Failed to load item');
         setError(message);
         showToastError(message);
       } finally {
@@ -64,6 +71,7 @@ export default function ItemDetailScreen() {
       name: item.name,
       quantity: String(item.quantity),
       unit: item.unit,
+      category: item.category ?? '',
       expiryDate: item.expiryDate ?? '',
       usageInstruction: item.usageInstruction ?? '',
     });
@@ -74,30 +82,19 @@ export default function ItemDetailScreen() {
     if (!item || !editForm.name.trim()) return;
     setSaving(true);
     try {
-      await pantryApi.update(item.id, {
+      const updated = await pantryApi.update(item.id, {
         name: editForm.name.trim(),
         quantity: Number(editForm.quantity),
         unit: editForm.unit.trim(),
+        category: editForm.category || undefined,
         expiryDate: editForm.expiryDate.trim() || undefined,
         usageInstruction: editForm.usageInstruction.trim() || undefined,
       });
-      setItem((prev) =>
-        prev
-          ? {
-              ...prev,
-              name: editForm.name.trim(),
-              quantity: Number(editForm.quantity),
-              unit: editForm.unit.trim(),
-              expiryDate: editForm.expiryDate.trim() || prev.expiryDate,
-              usageInstruction: editForm.usageInstruction.trim() || prev.usageInstruction,
-            }
-          : prev,
-      );
+      setItem(updated);
       setEditing(false);
       showToastSuccess('Item updated');
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Update failed';
-      showToastError(message);
+      showToastError(getErrorMessage(e, 'Update failed'));
     } finally {
       setSaving(false);
     }
@@ -117,8 +114,7 @@ export default function ItemDetailScreen() {
             showToastSuccess('Item deleted');
             router.back();
           } catch (e: unknown) {
-            const message = e instanceof Error ? e.message : 'Delete failed';
-            showToastError(message);
+            showToastError(getErrorMessage(e, 'Delete failed'));
             setDeleting(false);
           }
         },
@@ -176,6 +172,23 @@ export default function ItemDetailScreen() {
             />
           </View>
         </View>
+
+        <Text style={styles.label}>Category</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+          {CATEGORIES.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.chip, editForm.category === cat && styles.chipActive]}
+              onPress={() =>
+                setEditForm((prev) => ({ ...prev, category: prev.category === cat ? '' : cat }))
+              }
+            >
+              <Text style={[styles.chipText, editForm.category === cat && styles.chipTextActive]}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         <Text style={styles.label}>Expiry Date</Text>
         <TextInput
@@ -280,6 +293,20 @@ const styles = StyleSheet.create({
   },
   half: { flex: 1 },
   formRow: { flexDirection: 'row', gap: 12 },
+
+  chipRow: { marginTop: 4 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    marginRight: 8,
+    backgroundColor: '#f9fafb',
+  },
+  chipActive: { backgroundColor: '#208AEF', borderColor: '#208AEF' },
+  chipText: { fontSize: 13, color: '#555' },
+  chipTextActive: { color: '#fff' },
 
   card: {
     backgroundColor: '#f9fafb',

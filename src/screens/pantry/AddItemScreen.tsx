@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
 import { FoodCategory, PantryItemSource } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
+import { getErrorMessage } from '@/utils/apiError';
 import { validatePantryItem } from '@/utils/pantryValidation';
 
 const CATEGORIES = Object.values(FoodCategory);
@@ -69,8 +70,7 @@ export default function AddItemScreen() {
       showToastSuccess('Item added to pantry');
       router.back();
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to add item';
-      showToastError(message);
+      showToastError(getErrorMessage(e, 'Failed to add item'));
     } finally {
       setSubmitting(false);
     }
