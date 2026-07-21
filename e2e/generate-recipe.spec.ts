@@ -1,57 +1,78 @@
 import { test, expect } from '@playwright/test';
 
-test('generates a recipe from pantry items', async ({ page }) => {
+test('generates a recipe preview from the pantry and shows save / regenerate', async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('freshly_access_token', 'e2e-access-token');
     window.localStorage.setItem('freshly_refresh_token', 'e2e-refresh-token');
   });
 
+  // The screen loads the user's pantry on mount for the read-only preview.
+  await page.route('http://localhost:3000/pantry-items', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 'p1', name: 'chicken', quantity: 1, unit: 'kg', source: 'manual' },
+        { id: 'p2', name: 'rice', quantity: 500, unit: 'g', source: 'manual' },
+      ]),
+    });
+  });
+
+  // Pantry is read server-side, so the client only sends the refinement inputs.
   await page.route('http://localhost:3000/recipes/generate', async (route) => {
     expect(route.request().method()).toBe('POST');
-
     expect(route.request().postDataJSON()).toEqual({
-      pantryItems: ['chicken', 'rice', 'tomato'],
-      preferences: 'Vietnamese food',
+      mealType: 'dinner',
+      cuisine: 'Asian',
+      servings: 2,
+      notes: 'high protein',
     });
 
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        title: 'Vietnamese Chicken Rice',
-        description: 'A simple meal made with pantry ingredients.',
-        ingredients: ['chicken', 'rice', 'tomato'],
-        instructions: 'Cook the rice, chicken, and tomato together.',
-        estimatedTime: 30,
+        title: 'Chicken Fried Rice',
+        description: 'A quick pantry dinner.',
+        cuisine: 'Asian',
         servings: 2,
-        missingIngredients: ['fish sauce'],
+        estimatedMinutes: 30,
+        ingredients: [
+          { name: 'chicken', quantity: 300, unit: 'g' },
+          { name: 'rice', quantity: 400, unit: 'g' },
+        ],
+        instructions: ['Cook the rice.', 'Fry the chicken.'],
+        nutrition: { calories: 620, protein: 45, carbs: 60, fat: 18 },
+        missingIngredients: [{ name: 'fish sauce', quantity: 15, unit: 'ml' }],
       }),
     });
   });
 
   await page.goto('/generate-recipe');
 
-  await page.getByPlaceholder('Pantry items, separated by commas').fill('chicken, rice, tomato');
+  // Pantry preview loaded.
+  await expect(page.getByText('Cooking from your pantry')).toBeVisible();
 
-  await page.getByPlaceholder('Preferences, cuisine, or allergies').fill('Vietnamese food');
+  // Fill the refinement inputs (servings defaults to 2).
+  await page.getByText('Dinner', { exact: true }).click();
+  await page.getByPlaceholder('e.g. Italian, Thai (optional)').fill('Asian');
+  await page
+    .getByPlaceholder('e.g. high protein, no dairy, make it spicy (optional)')
+    .fill('high protein');
 
   await page.getByText('Generate Recipe', { exact: true }).click();
 
-  await expect(page.getByText('Recipe generated')).toBeVisible();
-  await expect(
-    page.getByText('Your AI recipe is ready. You can review and edit it below.'),
-  ).toBeVisible();
-
-  await page.getByText('OK', { exact: true }).click();
-
-  await expect(page.locator('input').nth(1)).toHaveValue('Vietnamese Chicken Rice');
-
-  await expect(page.locator('textarea').nth(2)).toHaveValue('chicken, rice, tomato');
-
-  await expect(page.locator('textarea').nth(3)).toHaveValue(
-    'Cook the rice, chicken, and tomato together.',
-  );
-
-  await expect(page.getByText('Missing ingredients')).toBeVisible();
+  // Inline preview.
+  await expect(page.getByText('Chicken Fried Rice')).toBeVisible();
+  await expect(page.getByText('30 min')).toBeVisible();
+  await expect(page.getByText('620 kcal')).toBeVisible();
+  await expect(page.getByText("You'll need to buy")).toBeVisible();
   await expect(page.getByText('fish sauce')).toBeVisible();
+  await expect(page.getByText('Save recipe')).toBeVisible();
+
+  // Regeneration now requires the user to clarify what to change.
+  await page.getByText('Generate another').click();
+  await expect(page.getByText('What should we change?')).toBeVisible();
 });
