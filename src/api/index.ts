@@ -4,3 +4,4 @@ export { tokenStorage } from './tokenStorage';
 export { authApi } from './auth';
 export { pantryApi } from './pantry';
 export { recipesApi } from './recipes';
+export { mealPlansApi } from './mealPlans';
