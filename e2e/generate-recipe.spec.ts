@@ -1,8 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('generates a recipe preview from the pantry and shows save / regenerate', async ({
-  page,
-}) => {
+test('generates a recipe preview from the pantry and shows save / regenerate', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('freshly_access_token', 'e2e-access-token');
     window.localStorage.setItem('freshly_refresh_token', 'e2e-refresh-token');

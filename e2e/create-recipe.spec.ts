@@ -41,7 +41,9 @@ test('creates a recipe successfully', async ({ page }) => {
   await page.getByPlaceholder('Ingredient', { exact: true }).fill('chicken');
   await page.getByPlaceholder('Qty', { exact: true }).fill('200');
   await page.getByPlaceholder('Unit', { exact: true }).fill('g');
-  await page.getByPlaceholder('Step 1', { exact: true }).fill('Cook the pasta and mix all ingredients.');
+  await page
+    .getByPlaceholder('Step 1', { exact: true })
+    .fill('Cook the pasta and mix all ingredients.');
 
   // Save lives in the navigation header.
   await page.getByText('Save', { exact: true }).click();
