@@ -7,15 +7,16 @@ test('creates a recipe successfully', async ({ page }) => {
   });
 
   await page.route('http://localhost:3000/recipes', async (route) => {
-    expect(route.request().method()).toBe('POST');
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
 
     expect(route.request().postDataJSON()).toEqual({
       title: 'Chicken Pasta',
       description: 'Easy dinner recipe',
-      ingredients: ['chicken', 'pasta', 'tomato sauce'],
-      instructions: 'Cook the pasta and mix all ingredients.',
-      servings: 2,
-      estimatedTime: 30,
+      instructions: '1. Cook the pasta and mix all ingredients.',
+      ingredients: [{ ingredientName: 'chicken', quantity: 200, unit: 'g' }],
     });
 
     await route.fulfill({
@@ -25,26 +26,25 @@ test('creates a recipe successfully', async ({ page }) => {
         id: 'recipe-2',
         title: 'Chicken Pasta',
         description: 'Easy dinner recipe',
-        ingredients: ['chicken', 'pasta', 'tomato sauce'],
-        instructions: 'Cook the pasta and mix all ingredients.',
-        servings: 2,
-        estimatedTime: 30,
+        instructions: '1. Cook the pasta and mix all ingredients.',
+        ingredients: [{ ingredientName: 'chicken', quantity: 200, unit: 'g' }],
       }),
     });
   });
 
   await page.goto('/create-recipe');
 
-  await page.getByPlaceholder('Recipe title').fill('Chicken Pasta');
-  await page.getByPlaceholder('Description').fill('Easy dinner recipe');
-  await page
-    .getByPlaceholder('Ingredients, separated by commas')
-    .fill('chicken, pasta, tomato sauce');
-  await page
-    .getByPlaceholder('Cooking instructions')
-    .fill('Cook the pasta and mix all ingredients.');
+  await page.getByPlaceholder('Name your recipe').fill('Chicken Pasta');
+  await page.getByPlaceholder('Introduce your recipe').fill('Easy dinner recipe');
 
-  await page.getByText('Save Recipe').click();
+  // One ingredient row and one step row exist by default.
+  await page.getByPlaceholder('Ingredient', { exact: true }).fill('chicken');
+  await page.getByPlaceholder('Qty', { exact: true }).fill('200');
+  await page.getByPlaceholder('Unit', { exact: true }).fill('g');
+  await page.getByPlaceholder('Step 1', { exact: true }).fill('Cook the pasta and mix all ingredients.');
+
+  // Save lives in the navigation header.
+  await page.getByText('Save', { exact: true }).click();
 
   await expect(page.getByText('Recipe created')).toBeVisible();
   await expect(page.getByText('Your recipe has been saved.')).toBeVisible();
