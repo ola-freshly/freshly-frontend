@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { PantryItemSource } from '@/api/types';
@@ -41,6 +43,14 @@ export default function PantryScreen() {
   } = usePantry();
   const form = usePantryForm();
 
+  // Reload on focus so the list re-mounts each visit — this both keeps the
+  // pantry fresh and replays the row entrance animation, matching RecipesScreen.
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload]),
+  );
+
   const sections = useMemo(() => buildSections(items), [items]);
 
   const submit = async () => {
@@ -72,7 +82,7 @@ export default function PantryScreen() {
   };
 
   const Header = (
-    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       <Text style={styles.headerTitle}>Pantry</Text>
       <Text style={styles.headerCount}>
         {items.length} item{items.length === 1 ? '' : 's'}
@@ -123,7 +133,15 @@ export default function PantryScreen() {
       <SectionList
         sections={sections}
         keyExtractor={(it) => it.id}
-        renderItem={({ item }) => <PantryRow item={item} onPress={() => form.openEdit(item)} />}
+        renderItem={({ item, index }) => (
+          <Animated.View
+            entering={FadeInDown.delay(index * 30)
+              .springify()
+              .damping(30)}
+          >
+            <PantryRow item={item} onPress={() => form.openEdit(item)} />
+          </Animated.View>
+        )}
         renderSectionHeader={({ section }) => (
           <Text style={styles.sectionHeader}>{section.title}</Text>
         )}

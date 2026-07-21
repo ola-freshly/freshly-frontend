@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { pantryApi } from '@/api/pantry';
 import { pantryCache } from '@/utils/pantryCache';
 import type { CreatePantryItemDto, PantryItem, UpdatePantryItemDto } from '@/api/types';
@@ -33,13 +33,6 @@ export function usePantry() {
     }
   }, []);
 
-  useEffect(() => {
-    // Fetch-on-mount: load() sets state asynchronously after awaiting the API.
-    // The rule's syntactic trace can't see past the await, so this is a false positive.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, [load]);
-
   const addItem = useCallback(async (dto: CreatePantryItemDto) => {
     const created = await pantryApi.create(dto);
     setItems((prev) => [created, ...prev]);
@@ -55,14 +48,19 @@ export function usePantry() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
+  // Stable handlers so consumers can safely list reload/refresh in effect deps
+  // (an inline arrow here would change identity every render and loop useFocusEffect).
+  const reload = useCallback(() => load(false), [load]);
+  const refresh = useCallback(() => load(true), [load]);
+
   return {
     items,
     loading,
     refreshing,
     error,
     showingCached,
-    reload: () => load(false),
-    refresh: () => load(true),
+    reload,
+    refresh,
     addItem,
     editItem,
     deleteItem,
