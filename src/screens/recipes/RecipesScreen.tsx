@@ -1,23 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
-import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorBar } from '@/components/ErrorBar';
 import { tapLight } from '@/utils/haptics';
 import { useRecipes } from '@/screens/recipes/use-recipes';
 
 const ACCENT = '#16A34A';
 const ACCENT_LIGHT = '#F0FDF4';
-const DANGER = '#DC2626';
 
 export default function RecipesScreen() {
   const { recipes, loading, refreshing, error, reload, refresh } = useRecipes();
@@ -81,17 +74,7 @@ export default function RecipesScreen() {
     <View style={styles.container}>
       {ActionRow}
 
-      {error ? (
-        <View style={styles.errorBar}>
-          <Ionicons name="alert-circle-outline" size={18} color={DANGER} />
-          <Text style={styles.errorText} selectable>
-            {error}
-          </Text>
-          <Pressable onPress={reload} hitSlop={8}>
-            <Text style={styles.retry}>Retry</Text>
-          </Pressable>
-        </View>
-      ) : null}
+      {error ? <ErrorBar message={error} onRetry={reload} /> : null}
 
       <FlatList
         data={recipes}
@@ -135,19 +118,13 @@ export default function RecipesScreen() {
         )}
         ListEmptyComponent={
           !error ? (
-            <View style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="restaurant-outline" size={40} color={ACCENT} />
-              </View>
-              <Text style={styles.emptyTitle}>No recipes yet</Text>
-              <Text style={styles.emptySub}>
-                Create your own recipe or generate one with AI to get started.
-              </Text>
-              <Pressable style={styles.emptyBtn} onPress={() => goTo('/create-recipe')}>
-                <Ionicons name="add" size={18} color="#fff" />
-                <Text style={styles.emptyBtnText}>Create your first recipe</Text>
-              </Pressable>
-            </View>
+            <EmptyState
+              icon="restaurant-outline"
+              title="No recipes yet"
+              subtitle="Create your own recipe or generate one with AI to get started."
+              actionLabel="Create your first recipe"
+              onAction={() => goTo('/create-recipe')}
+            />
           ) : null
         }
       />
@@ -227,48 +204,6 @@ const styles = StyleSheet.create({
   skeleton: { backgroundColor: '#ECECEC' },
   skeletonIcon: { width: 44, height: 44, borderRadius: 12 },
 
-  // Error bar
-  errorBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderCurve: 'continuous',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
-  },
-  errorText: { flex: 1, color: DANGER, fontSize: 13 },
-  retry: { color: DANGER, fontWeight: '700', fontSize: 13 },
-
-  // Empty state
+  // Empty state: the list centers the shared <EmptyState /> via this container.
   emptyWrap: { flexGrow: 1, justifyContent: 'center' },
-  empty: { alignItems: 'center', paddingHorizontal: 40, gap: 8 },
-  emptyIcon: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: ACCENT_LIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  emptySub: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 21 },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    backgroundColor: ACCENT,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 999,
-    boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)',
-  },
-  emptyBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
