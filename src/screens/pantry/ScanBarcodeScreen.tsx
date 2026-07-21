@@ -15,7 +15,6 @@ import { FoodCategory, PantryItemSource } from '@/api/types';
 import type { ScanResult } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
 import { getErrorMessage } from '@/utils/apiError';
-import { pantryEvents } from '@/utils/pantryEvents';
 
 const CATEGORIES = Object.values(FoodCategory);
 
@@ -74,7 +73,6 @@ export default function ScanBarcodeScreen() {
         usageInstruction: editInstruction.trim() || undefined,
         source: PantryItemSource.BARCODE,
       });
-      pantryEvents.emit();
       showToastSuccess('Item saved to pantry');
       router.back();
     } catch (e: unknown) {

@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBar } from '@/components/ErrorBar';
+import { getErrorMessage } from '@/utils/apiError';
 import { PantryItemSource } from '@/api/types';
 import { usePantry } from '@/screens/pantry/use-pantry';
 import { usePantryForm } from '@/screens/pantry/use-pantry-form';
@@ -62,7 +63,7 @@ export default function PantryScreen() {
       }
       form.close();
     } catch (e) {
-      Alert.alert('Save failed', e instanceof Error ? e.message : 'Could not save the item.');
+      Alert.alert('Save failed', getErrorMessage(e, 'Could not save the item.'));
     }
   };
 
@@ -72,7 +73,7 @@ export default function PantryScreen() {
       await deleteItem(form.editingId);
       form.close();
     } catch (e) {
-      Alert.alert('Delete failed', e instanceof Error ? e.message : 'Could not delete the item.');
+      Alert.alert('Delete failed', getErrorMessage(e, 'Could not delete the item.'));
     }
   };
 

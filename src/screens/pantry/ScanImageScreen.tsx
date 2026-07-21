@@ -15,7 +15,6 @@ import { FoodCategory, PantryItemSource } from '@/api/types';
 import type { ScanResult } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
 import { getErrorMessage } from '@/utils/apiError';
-import { pantryEvents } from '@/utils/pantryEvents';
 import * as ImagePicker from 'expo-image-picker';
 
 const CATEGORIES = Object.values(FoodCategory);
@@ -103,7 +102,6 @@ export default function ScanImageScreen() {
         usageInstruction: editInstruction.trim() || undefined,
         source: PantryItemSource.AI,
       });
-      pantryEvents.emit();
       showToastSuccess('Item saved to pantry');
       router.back();
     } catch (e: unknown) {

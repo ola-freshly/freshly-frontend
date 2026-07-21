@@ -16,7 +16,6 @@ import { FoodCategory } from '@/api/types';
 import type { PantryItem } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
 import { getErrorMessage } from '@/utils/apiError';
-import { pantryEvents } from '@/utils/pantryEvents';
 
 const CATEGORIES = Object.values(FoodCategory);
 
@@ -93,7 +92,6 @@ export default function ItemDetailScreen() {
       });
       setItem(updated);
       setEditing(false);
-      pantryEvents.emit();
       showToastSuccess('Item updated');
     } catch (e: unknown) {
       showToastError(getErrorMessage(e, 'Update failed'));
@@ -113,7 +111,6 @@ export default function ItemDetailScreen() {
           setDeleting(true);
           try {
             await pantryApi.remove(item.id);
-            pantryEvents.emit();
             showToastSuccess('Item deleted');
             router.back();
           } catch (e: unknown) {
