@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
 import { pantryCache } from '@/utils/pantryCache';
+import { pantryEvents } from '@/utils/pantryEvents';
+import { getErrorMessage } from '@/utils/apiError';
 import type { PantryItem } from '@/api/types';
 
 export default function PantryScreen() {
@@ -36,8 +38,7 @@ export default function PantryScreen() {
         setItems(cached);
         setShowingCached(true);
       } else {
-        const message = e instanceof Error ? e.message : 'Failed to load pantry items';
-        setError(message);
+        setError(getErrorMessage(e, 'Failed to load pantry items'));
       }
     } finally {
       setLoading(false);
@@ -50,6 +51,11 @@ export default function PantryScreen() {
       fetchItems();
     }, [fetchItems]),
   );
+
+  useEffect(() => {
+    const unsubscribe = pantryEvents.subscribe(() => fetchItems());
+    return unsubscribe;
+  }, [fetchItems]);
 
   const onRefresh = () => fetchItems(true);
 

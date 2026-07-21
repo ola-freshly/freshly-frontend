@@ -14,6 +14,8 @@ import { pantryApi } from '@/api/pantry';
 import { FoodCategory, PantryItemSource } from '@/api/types';
 import type { ScanResult } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
+import { getErrorMessage } from '@/utils/apiError';
+import { pantryEvents } from '@/utils/pantryEvents';
 
 const CATEGORIES = Object.values(FoodCategory);
 
@@ -48,7 +50,7 @@ export default function ScanBarcodeScreen() {
       setEditExpiry(data.expirationDate ?? '');
       setEditInstruction(data.usageInstruction ?? '');
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Barcode lookup failed';
+      const message = getErrorMessage(e, 'Barcode lookup failed');
       setError(message);
       showToastError(message);
     } finally {
@@ -72,11 +74,11 @@ export default function ScanBarcodeScreen() {
         usageInstruction: editInstruction.trim() || undefined,
         source: PantryItemSource.BARCODE,
       });
+      pantryEvents.emit();
       showToastSuccess('Item saved to pantry');
       router.back();
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to save';
-      showToastError(message);
+      showToastError(getErrorMessage(e, 'Failed to save'));
     } finally {
       setSubmitting(false);
     }
