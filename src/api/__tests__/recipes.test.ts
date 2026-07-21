@@ -37,8 +37,14 @@ describe('recipesApi', () => {
   it('creates a recipe', async () => {
     const payload = {
       title: 'Chicken Pasta',
-      instructions: 'Cook and serve.',
-      ingredients: ['chicken', 'pasta'],
+      description: 'Weeknight favourite.',
+      instructions: '1. Cook pasta.\n2. Add chicken and serve.',
+      servings: 2,
+      cookTime: 30,
+      ingredients: [
+        { ingredientName: 'chicken', quantity: 200, unit: 'g' },
+        { ingredientName: 'pasta' },
+      ],
     };
 
     const createdRecipe = {
@@ -56,23 +62,31 @@ describe('recipesApi', () => {
 
   it('generates a recipe', async () => {
     const payload = {
-      pantryItems: ['rice', 'egg'],
-      preferences: 'Asian',
+      mealType: 'dinner',
+      cuisine: 'Asian',
+      servings: 2,
+      notes: 'make it spicy',
     };
 
     const generatedRecipe = {
       title: 'Egg Fried Rice',
-      ingredients: ['rice', 'egg'],
-      instructions: 'Stir-fry all ingredients.',
-      estimatedTime: 20,
+      description: 'Quick fried rice.',
+      cuisine: 'Asian',
       servings: 2,
+      estimatedMinutes: 20,
+      ingredients: [{ name: 'rice', quantity: 200, unit: 'g' }],
+      instructions: ['Cook the rice', 'Fry everything'],
+      nutrition: { calories: 500, protein: 20, carbs: 60, fat: 15 },
+      missingIngredients: [],
     };
 
     mockedClient.post.mockResolvedValueOnce({ data: generatedRecipe });
 
     const result = await recipesApi.generateRecipe(payload);
 
-    expect(mockedClient.post).toHaveBeenCalledWith('/recipes/generate', payload);
+    expect(mockedClient.post).toHaveBeenCalledWith('/recipes/generate', payload, {
+      timeout: 45_000,
+    });
     expect(result).toEqual(generatedRecipe);
   });
 });

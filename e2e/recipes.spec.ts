@@ -16,7 +16,7 @@ test.describe('Recipe management', () => {
             {
               id: 'recipe-1',
               title: 'Chicken Fried Rice',
-              estimatedTime: 25,
+              cookTime: 25,
               servings: 2,
             },
           ]),
@@ -28,20 +28,13 @@ test.describe('Recipe management', () => {
     });
   });
 
-  test('shows recipe list and import tab', async ({ page }) => {
+  test('shows the action buttons and recipe list', async ({ page }) => {
     await page.goto('/recipes');
 
-    await expect(page.getByText('Recommended')).toBeVisible();
     await expect(page.getByText('Create Recipe')).toBeVisible();
     await expect(page.getByText('AI Generator')).toBeVisible();
 
     await expect(page.getByText('Chicken Fried Rice')).toBeVisible();
     await expect(page.getByText('25 min • 2 servings')).toBeVisible();
-
-    await page.getByText('Import').click();
-
-    await expect(
-      page.getByText('Paste a YouTube cooking video URL to import a recipe.'),
-    ).toBeVisible();
   });
 });
