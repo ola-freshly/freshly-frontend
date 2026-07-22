@@ -62,6 +62,17 @@ export type AcceptRecommendation = {
   }[];
 };
 
+export type MealPlanItems={
+  id: string;
+  mealDate: string;
+  mealType: string;
+  recipe: {
+    title: string;
+    cookTime?: number;
+    calories: number;
+  };
+};
+
 function normalisePlans(value: unknown): MealPlan[] {
   if (Array.isArray(value)) {
     return value as MealPlan[];
@@ -84,6 +95,11 @@ export const mealPlansApi = {
   async list(): Promise<MealPlan[]> {
     const response = await client.get('/meal-plans');
     return normalisePlans(response.data);
+  },
+
+  async getItems(payload: { mealPlanId: string }): Promise<MealPlanItems[]> {
+    const response = await client.get('/meal-plan-items',{params:{mealPlanId:payload.mealPlanId}});
+    return response.data;
   },
 
   async create(payload: { name: string; startDate: string; endDate: string }): Promise<MealPlan> {
