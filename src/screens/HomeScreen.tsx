@@ -2,7 +2,6 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { Link } from 'expo-router';
 import { apiClient } from '@/api';
-import { ENV } from '@/config/env';
 
 export default function HomeScreen() {
   const [status, setStatus] = useState<string>('checking');

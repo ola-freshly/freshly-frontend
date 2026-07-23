@@ -1,7 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { MealType } from './theme';
 import { mealPlansApi } from '@/api';
-import client from '@/api/client';
 
 export type PlannerDish = {
   id: string;

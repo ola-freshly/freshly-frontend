@@ -37,6 +37,8 @@ export default function MealDetailScreen() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('ingredients');
+  const [servings, setServings] = useState<number>(1);
 
   const load = useCallback(async () => {
     if (!recipeId) {
@@ -61,8 +63,6 @@ export default function MealDetailScreen() {
     void load();
   }, [load]);
 
-  const [tab, setTab] = useState<Tab>('ingredients');
-  const [servings, setServings] = useState<number>(1);
   // Scale ingredient/nutrition amounts relative to the recipe's base servings.
   const factor = servings / (recipe?.servings ?? 1);
   const mealColor = MEALS.find((m) => m.type === mealType)?.color ?? ACCENT;
