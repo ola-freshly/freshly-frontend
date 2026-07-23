@@ -16,35 +16,6 @@ function scaleAmount(amount: string, factor: number): string {
   });
 }
 
-// --- MOCK DATA (replace with API later) ---
-const MOCK = {
-  title: 'Shrimp Tom Yum Soup',
-  category: 'Seafood',
-  rating: 4.5,
-  cookTime: 35,
-  servings: 1,
-  ingredients: [
-    { name: 'Shrimp', amount: '150 g' },
-    { name: 'Rice', amount: '80 g' },
-    { name: 'Pineapple', amount: '100 g' },
-    { name: 'Carrot', amount: '50 g' },
-    { name: 'Lemongrass', amount: '2 stalks' },
-    { name: 'Lime', amount: '1 pc' },
-  ],
-  instructions: [
-    'Bring 500 ml of water to a boil with the lemongrass.',
-    'Add the shrimp and cook for 2 minutes.',
-    'Add the carrots and pineapple, cook for another minute.',
-    'Season with lime juice and salt to taste.',
-  ],
-  nutrition: [
-    { label: 'Calories', value: '520 kcal', pct: '26%' },
-    { label: 'Fat', value: '18 g', pct: '23%' },
-    { label: 'Carbs', value: '45 g', pct: '15%' },
-    { label: 'Protein', value: '30 g', pct: '60%' },
-  ],
-};
-
 export default function MealDetailScreen() {
   const router = useRouter();
   const { id, date, mealType } = useLocalSearchParams<{

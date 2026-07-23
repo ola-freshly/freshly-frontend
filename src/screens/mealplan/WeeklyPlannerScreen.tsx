@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { ErrorBar } from '@/components/ErrorBar';
 import { MEALS, ACCENT, BG } from './theme';
-import { plannerStore, usePlannerVersion, startOfWeek, addDays, iso } from './store';
+import { plannerStore, usePlannerVersion, startOfWeek, addDays, iso, usePlannerStatus } from './store';
 
 export default function WeeklyPlannerScreen() {
   const router = useRouter();
@@ -11,6 +12,15 @@ export default function WeeklyPlannerScreen() {
   const [weekOffset, setWeekOffset] = useState(0);
   const weekStart = addDays(startOfWeek(new Date()), weekOffset * 7);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const { loading, error } = usePlannerStatus();
+
+  // Runs on mount, on week change (weekStart dep), and whenever the screen
+  // regains focus (e.g. returning from the add-meal modal).
+  useFocusEffect(
+    useCallback(() => {
+      void plannerStore.loadWeek(weekStart);
+    }, [weekStart]),
+  );
 
   const kcalOf = (dayIso: string) =>
     MEALS.reduce(
@@ -18,6 +28,7 @@ export default function WeeklyPlannerScreen() {
       0,
     );
   const weekKcal = days.reduce((sum, day) => sum + kcalOf(iso(day)), 0);
+
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={styles.content}>
@@ -44,7 +55,13 @@ export default function WeeklyPlannerScreen() {
         </Pressable>
       </View>
 
-      {weekKcal === 0 && (
+      {error ? (
+        <ErrorBar message={error} onRetry={() => void plannerStore.loadWeek(weekStart)} />
+      ) : null}
+
+      {loading && <ActivityIndicator color={ACCENT} style={styles.loader} />}
+
+      {weekKcal === 0 && !loading && !error && (
         <View style={styles.empty}>
           <View style={styles.emptyIcon}>
             <Ionicons name="calendar-outline" size={30} color={ACCENT} />
@@ -162,6 +179,7 @@ const styles = StyleSheet.create({
   weekRange: { fontSize: 15, fontWeight: '700', color: '#111' },
   weekKcalRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   weekKcal: { fontSize: 12, color: ACCENT, fontWeight: '600' },
+  loader: { marginVertical: 20 },
   empty: {
     backgroundColor: '#fff',
     borderRadius: 16,
