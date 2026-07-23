@@ -34,33 +34,33 @@ export default function MealDetailScreen() {
     date?: string;
     mealType?: string;
   }>();
-  const [recipe,setRecipe] = useState<Recipe | null>(null);
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load=useCallback(async () => {
-    if(!recipeId){
-      setError("Missing recipeId");
+  const load = useCallback(async () => {
+    if (!recipeId) {
+      setError('Missing recipeId');
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
-    try{
-      const data=await recipesApi.getRecipeById(recipeId);
+    try {
+      const data = await recipesApi.getRecipeById(recipeId);
       setRecipe(data);
-      setServings(data.servings??1)
-    }catch(e){
-      setError(e instanceof Error?e.message: "Failed to fetch recipes");
-    }finally {
+      setServings(data.servings ?? 1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to fetch recipes');
+    } finally {
       setLoading(false);
     }
-  },[recipeId]);
-  
+  }, [recipeId]);
+
   useEffect(() => {
     void load();
-  },[load])
-  
+  }, [load]);
+
   const [tab, setTab] = useState<Tab>('ingredients');
   const [servings, setServings] = useState<number>(1);
   // Scale ingredient/nutrition amounts relative to the recipe's base servings.
@@ -103,7 +103,6 @@ export default function MealDetailScreen() {
     ]);
   };
 
-
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
@@ -115,9 +114,7 @@ export default function MealDetailScreen() {
           </View>
         </View>
 
-        {error ? (
-          <ErrorBar message={error} onRetry={()=>load()} />
-        ) : null}
+        {error ? <ErrorBar message={error} onRetry={() => load()} /> : null}
 
         {loading && <ActivityIndicator color={ACCENT} style={styles.loader} />}
 

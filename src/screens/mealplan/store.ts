@@ -5,7 +5,7 @@ import client from '@/api/client';
 
 export type PlannerDish = {
   id: string;
-  recipeId:string;
+  recipeId: string;
   title: string;
   cookTime: number;
   calories: number;
@@ -18,7 +18,7 @@ const listeners = new Set<() => void>();
 let version = 0;
 
 let loading = false;
-let error:string|null=null;
+let error: string | null = null;
 
 const keyOf = (date: string, meal: MealType) => `${date}|${meal}`;
 const emit = () => {
@@ -44,42 +44,42 @@ export function iso(d: Date) {
 }
 
 export const plannerStore = {
-  isLoading: ()=>loading,
-  isError: ()=>error,
+  isLoading: () => loading,
+  isError: () => error,
 
-  async loadWeek(weekStart:Date){
-    const startIso=iso(weekStart);
-    const endIso=iso(addDays(weekStart,6));
+  async loadWeek(weekStart: Date) {
+    const startIso = iso(weekStart);
+    const endIso = iso(addDays(weekStart, 6));
 
-    loading=true;
-    error=null;
+    loading = true;
+    error = null;
     emit();
 
-    try{
-      const items=await mealPlansApi.itemsByRange(startIso,endIso);
+    try {
+      const items = await mealPlansApi.itemsByRange(startIso, endIso);
 
-      for(let i=0;i<7;i++){
+      for (let i = 0; i < 7; i++) {
         const d = iso(addDays(weekStart, i));
         (['breakfast', 'lunch', 'snack', 'dinner'] as MealType[]).forEach((meal) =>
           map.delete(keyOf(d, meal)),
         );
       }
 
-      for(const item of items){
-        const d=String(item.mealDate).slice(0,10);
-        if(d<startIso||d>endIso) continue;
-        const meal=item.mealType.toLowerCase() as MealType;
-        const k=keyOf(d, meal);
-        const dish: PlannerDish={
-          id:item.id,
-          title: item.recipe?.title ?? "Untitled",
+      for (const item of items) {
+        const d = String(item.mealDate).slice(0, 10);
+        if (d < startIso || d > endIso) continue;
+        const meal = item.mealType.toLowerCase() as MealType;
+        const k = keyOf(d, meal);
+        const dish: PlannerDish = {
+          id: item.id,
+          title: item.recipe?.title ?? 'Untitled',
           cookTime: Number(item.recipe?.cookTime ?? 0),
           calories: Number(item.recipe?.calories ?? 0),
-          recipeId:item.recipeId,
+          recipeId: item.recipeId,
         };
-        map.set(k,[...(map.get(k)??[]),dish])
+        map.set(k, [...(map.get(k) ?? []), dish]);
       }
-    }catch (e) {
+    } catch (e) {
       error =
         e && typeof e === 'object' && 'message' in e
           ? String((e as { message: unknown }).message)
@@ -128,5 +128,5 @@ export function usePlannerVersion() {
 
 export function usePlannerStatus() {
   usePlannerVersion();
-  return {loading:plannerStore.isLoading(),error: plannerStore.isError()};
+  return { loading: plannerStore.isLoading(), error: plannerStore.isError() };
 }

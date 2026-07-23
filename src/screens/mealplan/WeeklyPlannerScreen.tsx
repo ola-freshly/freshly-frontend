@@ -12,7 +12,14 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ErrorBar } from '@/components/ErrorBar';
 import { MEALS, ACCENT, BG } from './theme';
-import { plannerStore, usePlannerVersion, startOfWeek, addDays, iso, usePlannerStatus } from './store';
+import {
+  plannerStore,
+  usePlannerVersion,
+  startOfWeek,
+  addDays,
+  iso,
+  usePlannerStatus,
+} from './store';
 
 const DAYS_IN_WEEK = 7;
 
@@ -22,19 +29,14 @@ export default function WeeklyPlannerScreen() {
   const [weekOffset, setWeekOffset] = useState(0);
   // Memoize so weekStart keeps a stable reference per weekOffset — otherwise the
   // useFocusEffect callback below changes every render and refetches in a loop.
-  const weekStart = useMemo(
-    () => addDays(startOfWeek(new Date()), weekOffset * 7),
-    [weekOffset],
-  );
+  const weekStart = useMemo(() => addDays(startOfWeek(new Date()), weekOffset * 7), [weekOffset]);
   const days = Array.from({ length: DAYS_IN_WEEK }, (_, i) => addDays(weekStart, i));
   const { loading, error } = usePlannerStatus();
 
   // One persistent animated value per day card (0 = hidden, 1 = settled). Held in
   // a ref so they survive re-renders — this lets us replay the entrance on every
   // focus WITHOUT remounting the cards (which would rebuild every dish inside).
-  const anims = useRef(
-    Array.from({ length: DAYS_IN_WEEK }, () => new Animated.Value(0)),
-  ).current;
+  const anims = useRef(Array.from({ length: DAYS_IN_WEEK }, () => new Animated.Value(0))).current;
 
   const runEntrance = useCallback(() => {
     anims.forEach((v) => v.setValue(0));
@@ -171,7 +173,12 @@ export default function WeeklyPlannerScreen() {
                       onPress={() =>
                         router.push({
                           pathname: '/(app)/meal-detail',
-                          params: { id: dish.id, date: dayIso, mealType: meal.type, recipeId: dish.recipeId },
+                          params: {
+                            id: dish.id,
+                            date: dayIso,
+                            mealType: meal.type,
+                            recipeId: dish.recipeId,
+                          },
                         })
                       }
                     >

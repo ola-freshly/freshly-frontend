@@ -31,8 +31,10 @@ export default function AppLayout() {
         <Stack.Screen name="meal-detail" options={{ title: 'Meal' }} />
         <Stack.Screen
           name="meal-suggestion"
-          options={{ presentation: 'modal', title: 'Suggestions' }}
+          options={{ presentation: 'modal', title: 'Add a meal' }}
         />
+        <Stack.Screen name="pick-recipe" options={{ title: 'Choose a recipe' }} />
+        <Stack.Screen name="meal-plan-generate" options={{ title: 'Generate a meal' }} />
         <Stack.Screen name="edit-profile" options={{ title: 'Edit Profile' }} />
         <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
         <Stack.Screen name="profile-setup" options={{ headerShown: true }} />

@@ -30,7 +30,20 @@ describe('recipesApi', () => {
 
     const result = await recipesApi.getRecipes();
 
-    expect(mockedClient.get).toHaveBeenCalledWith('/recipes');
+    expect(mockedClient.get).toHaveBeenCalledWith('/recipes', { params: undefined });
+    expect(result).toEqual(recipes);
+  });
+
+  it('filters recipes by meal type', async () => {
+    const recipes = [{ id: '1', title: 'Oatmeal', instructions: 'Cook.', mealType: 'breakfast' }];
+
+    mockedClient.get.mockResolvedValueOnce({ data: recipes });
+
+    const result = await recipesApi.getRecipes('breakfast');
+
+    expect(mockedClient.get).toHaveBeenCalledWith('/recipes', {
+      params: { mealType: 'breakfast' },
+    });
     expect(result).toEqual(recipes);
   });
 

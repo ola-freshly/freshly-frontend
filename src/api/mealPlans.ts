@@ -99,8 +99,18 @@ export const mealPlansApi = {
     return normalisePlans(response.data);
   },
 
-  async remove(id:string):Promise<void>{
+  async remove(id: string): Promise<void> {
     await client.delete(`/meal-plan-items/${id}`);
+  },
+
+  async attachRecipe(payload: {
+    mealPlanId: string;
+    recipeId: string;
+    mealDate: string;
+    mealType: string;
+  }): Promise<MealPlanItemRecord> {
+    const response = await client.post<MealPlanItemRecord>('/meal-plan-items', payload);
+    return response.data;
   },
 
   // All items across the user's plans within [from, to] — one request per week.

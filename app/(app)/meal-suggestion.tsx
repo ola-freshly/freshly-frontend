@@ -1,1 +1,1 @@
-export { default } from '@/screens/mealplan/MealSuggestionModal';
+export { default } from '@/screens/mealplan/AddMealChooserScreen';
