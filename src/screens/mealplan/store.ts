@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { MealType } from './theme';
 import { mealPlansApi } from '@/api';
+import client from '@/api/client';
 
 export type PlannerDish = {
   id: string;
@@ -55,18 +56,7 @@ export const plannerStore = {
     emit();
 
     try{
-      const plans=await mealPlansApi.list();
-      const inWeek=plans.filter(
-        (p)=>{
-          const s=String(p.startDate).slice(0,10);
-          const e=String(p.endDate).slice(0,10);
-          return s<=endIso && e>=startIso;
-        });
-
-      const itemsPerPlan=await Promise.all(
-        inWeek.map((p)=>mealPlansApi.item(p.id)),
-      );
-      const items=itemsPerPlan.flat();
+      const items=await mealPlansApi.itemsByRange(startIso,endIso);
 
       for(let i=0;i<7;i++){
         const d = iso(addDays(weekStart, i));
@@ -108,6 +98,8 @@ export const plannerStore = {
     map.set(k, [...(map.get(k) ?? []), dish]);
     emit();
   },
+  // Local (optimistic) removal only. The backend DELETE is triggered by the
+  // caller (MealDetailScreen) so the store stays a synchronous local cache.
   remove(date: string, meal: MealType, id: string) {
     const k = keyOf(date, meal);
     map.set(

@@ -1,25 +1,63 @@
-import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  Animated,
+} from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ErrorBar } from '@/components/ErrorBar';
 import { MEALS, ACCENT, BG } from './theme';
 import { plannerStore, usePlannerVersion, startOfWeek, addDays, iso, usePlannerStatus } from './store';
 
+const DAYS_IN_WEEK = 7;
+
 export default function WeeklyPlannerScreen() {
   const router = useRouter();
   usePlannerVersion(); // re-render when dishes are added/removed
   const [weekOffset, setWeekOffset] = useState(0);
-  const weekStart = addDays(startOfWeek(new Date()), weekOffset * 7);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Memoize so weekStart keeps a stable reference per weekOffset — otherwise the
+  // useFocusEffect callback below changes every render and refetches in a loop.
+  const weekStart = useMemo(
+    () => addDays(startOfWeek(new Date()), weekOffset * 7),
+    [weekOffset],
+  );
+  const days = Array.from({ length: DAYS_IN_WEEK }, (_, i) => addDays(weekStart, i));
   const { loading, error } = usePlannerStatus();
+
+  // One persistent animated value per day card (0 = hidden, 1 = settled). Held in
+  // a ref so they survive re-renders — this lets us replay the entrance on every
+  // focus WITHOUT remounting the cards (which would rebuild every dish inside).
+  const anims = useRef(
+    Array.from({ length: DAYS_IN_WEEK }, () => new Animated.Value(0)),
+  ).current;
+
+  const runEntrance = useCallback(() => {
+    anims.forEach((v) => v.setValue(0));
+    Animated.stagger(
+      60,
+      anims.map((v) =>
+        Animated.spring(v, {
+          toValue: 1,
+          friction: 2,
+          tension: 60,
+          useNativeDriver: true, // opacity + transform run on the native thread
+        }),
+      ),
+    ).start();
+  }, [anims]);
 
   // Runs on mount, on week change (weekStart dep), and whenever the screen
   // regains focus (e.g. returning from the add-meal modal).
   useFocusEffect(
     useCallback(() => {
+      runEntrance();
       void plannerStore.loadWeek(weekStart);
-    }, [weekStart]),
+    }, [weekStart, runEntrance]),
   );
 
   const kcalOf = (dayIso: string) =>
@@ -29,6 +67,15 @@ export default function WeeklyPlannerScreen() {
     );
   const weekKcal = days.reduce((sum, day) => sum + kcalOf(iso(day)), 0);
 
+  // Full-screen loader on the initial fetch (before any data), so we never show
+  // a half-populated screen. A background refresh of a loaded week keeps the UI.
+  if (loading && weekKcal === 0 && !error) {
+    return (
+      <View style={styles.fullLoader}>
+        <ActivityIndicator size="large" color={ACCENT} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={styles.content}>
@@ -73,7 +120,7 @@ export default function WeeklyPlannerScreen() {
         </View>
       )}
 
-      {days.map((day) => {
+      {days.map((day, index) => {
         const dayIso = iso(day);
         const dayKcal = kcalOf(dayIso);
         const openAdd = (mealType: string) =>
@@ -81,7 +128,23 @@ export default function WeeklyPlannerScreen() {
         const filled = MEALS.filter((m) => plannerStore.get(dayIso, m.type).length > 0);
         const emptyMeals = MEALS.filter((m) => plannerStore.get(dayIso, m.type).length === 0);
         return (
-          <View key={dayIso} style={styles.dayCard}>
+          <Animated.View
+            key={dayIso}
+            style={[
+              styles.dayCard,
+              {
+                opacity: anims[index],
+                transform: [
+                  {
+                    translateY: anims[index].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [16, 0], // slide up as it fades in
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
             <View style={styles.dayHead}>
               <Text style={styles.dayTitle}>
                 {day.toLocaleDateString(undefined, {
@@ -102,10 +165,13 @@ export default function WeeklyPlannerScreen() {
                     <Pressable
                       key={dish.id}
                       style={styles.dish}
+                      // Skip navigation until the dish has a real recipeId — a
+                      // freshly-added dish has an empty one until the DB refetch.
+                      disabled={!dish.recipeId}
                       onPress={() =>
                         router.push({
                           pathname: '/(app)/meal-detail',
-                          params: { id: dish.id, date: dayIso, mealType: meal.type, recipeId:dish.recipeId },
+                          params: { id: dish.id, date: dayIso, mealType: meal.type, recipeId: dish.recipeId },
                         })
                       }
                     >
@@ -152,7 +218,7 @@ export default function WeeklyPlannerScreen() {
                 ))}
               </View>
             )}
-          </View>
+          </Animated.View>
         );
       })}
     </ScrollView>
@@ -180,6 +246,7 @@ const styles = StyleSheet.create({
   weekKcalRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   weekKcal: { fontSize: 12, color: ACCENT, fontWeight: '600' },
   loader: { marginVertical: 20 },
+  fullLoader: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' },
   empty: {
     backgroundColor: '#fff',
     borderRadius: 16,

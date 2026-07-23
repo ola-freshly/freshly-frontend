@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ACCENT, DANGER, MealType, MEALS } from './theme';
 import { plannerStore } from './store';
-import { Recipe, recipesApi } from '@/api';
+import { mealPlansApi, Recipe, recipesApi } from '@/api';
 import { ErrorBar } from '@/components/ErrorBar';
 
 type Tab = 'ingredients' | 'instructions' | 'nutrition';
@@ -89,9 +89,15 @@ export default function MealDetailScreen() {
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: () => {
-          if (id && date && mealType) plannerStore.remove(date, mealType as MealType, id);
-          router.back();
+        onPress: async () => {
+          if (!id || !date || !mealType) return;
+          try {
+            await mealPlansApi.remove(id);
+            plannerStore.remove(date, mealType as MealType, id);
+            router.back();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to remove dish.');
+          }
         },
       },
     ]);
@@ -313,7 +319,6 @@ const styles = StyleSheet.create({
   },
   nutLabel: { flex: 1, fontSize: 15, color: '#333' },
   nutVal: { fontSize: 15, fontWeight: '600', color: '#111', marginRight: 16 },
-  nutPct: { fontSize: 13, color: '#999', width: 44, textAlign: 'right' },
   nutNote: { fontSize: 11, color: '#AAA', marginTop: 8 },
   bottomBar: {
     flexDirection: 'row',
