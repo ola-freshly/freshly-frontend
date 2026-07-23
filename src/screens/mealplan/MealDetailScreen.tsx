@@ -1,9 +1,19 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ACCENT, DANGER, MealType, MEALS } from './theme';
 import { plannerStore } from './store';
+import { Recipe, recipesApi } from '@/api';
+import { ErrorBar } from '@/components/ErrorBar';
 
 type Tab = 'ingredients' | 'instructions' | 'nutrition';
 
@@ -18,18 +28,63 @@ function scaleAmount(amount: string, factor: number): string {
 
 export default function MealDetailScreen() {
   const router = useRouter();
-  const { id, date, mealType } = useLocalSearchParams<{
+  const { id, recipeId, date, mealType } = useLocalSearchParams<{
     id?: string;
+    recipeId?: string;
     date?: string;
     mealType?: string;
   }>();
+  const [recipe,setRecipe] = useState<Recipe | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load=useCallback(async () => {
+    if(!recipeId){
+      setError("Missing recipeId");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try{
+      const data=await recipesApi.getRecipeById(recipeId);
+      setRecipe(data);
+      setServings(data.servings??1)
+    }catch(e){
+      setError(e instanceof Error?e.message: "Failed to fetch recipes");
+    }finally {
+      setLoading(false);
+    }
+  },[recipeId]);
+  
+  useEffect(() => {
+    void load();
+  },[load])
+  
   const [tab, setTab] = useState<Tab>('ingredients');
-  const [servings, setServings] = useState(MOCK.servings);
-  const factor = servings / MOCK.servings;
+  const [servings, setServings] = useState<number>(1);
+  // Scale ingredient/nutrition amounts relative to the recipe's base servings.
+  const factor = servings / (recipe?.servings ?? 1);
   const mealColor = MEALS.find((m) => m.type === mealType)?.color ?? ACCENT;
 
+  // API stores instructions as one string; render as numbered steps.
+  const steps = (recipe?.instructions ?? '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // Build nutrition rows from the flat recipe fields (the API has no array).
+  const nutrition = recipe
+    ? [
+        { label: 'Calories', value: `${Number(recipe.calories ?? 0)} kcal` },
+        { label: 'Protein', value: `${Number(recipe.protein ?? 0)} g` },
+        { label: 'Carbs', value: `${Number(recipe.carbs ?? 0)} g` },
+        { label: 'Fat', value: `${Number(recipe.fat ?? 0)} g` },
+      ]
+    : [];
+
   const remove = () => {
-    Alert.alert('Remove dish?', `“${MOCK.title}” will be removed from this meal.`, [
+    Alert.alert('Remove dish?', `“${recipe?.title}” will be removed from this meal.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -42,6 +97,7 @@ export default function MealDetailScreen() {
     ]);
   };
 
+
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
@@ -49,18 +105,21 @@ export default function MealDetailScreen() {
         <View style={[styles.banner, { backgroundColor: mealColor }]}>
           <Ionicons name="fish-outline" size={54} color="#fff" />
           <View style={styles.badge}>
-            <Text style={styles.badgeT}>{MOCK.category}</Text>
+            <Text style={styles.badgeT}>{recipe?.cuisine}</Text>
           </View>
         </View>
 
+        {error ? (
+          <ErrorBar message={error} onRetry={()=>load()} />
+        ) : null}
+
+        {loading && <ActivityIndicator color={ACCENT} style={styles.loader} />}
+
         <View style={{ padding: 20, gap: 12 }}>
-          <Text style={styles.title}>{MOCK.title}</Text>
+          <Text style={styles.title}>{recipe?.title}</Text>
           <View style={styles.metaRow}>
-            <Ionicons name="star" size={13} color="#F59E0B" />
-            <Text style={styles.meta}>{MOCK.rating}</Text>
-            <Text style={styles.metaDot}>·</Text>
             <Ionicons name="time-outline" size={13} color="#888" />
-            <Text style={styles.meta}>{MOCK.cookTime} min</Text>
+            <Text style={styles.meta}>{recipe?.cookTime} min</Text>
             <Text style={styles.metaDot}>·</Text>
             <Ionicons name="person-outline" size={13} color="#888" />
             <Text style={styles.meta}>
@@ -104,13 +163,15 @@ export default function MealDetailScreen() {
                   </Pressable>
                 </View>
               </View>
-              {MOCK.ingredients.map((ing) => (
-                <View key={ing.name} style={styles.ingRow}>
+              {(recipe?.ingredients ?? []).map((ing) => (
+                <View key={ing.ingredientName} style={styles.ingRow}>
                   <View style={styles.ingIcon}>
                     <Ionicons name="ellipse" size={10} color={ACCENT} />
                   </View>
-                  <Text style={styles.ingName}>{ing.name}</Text>
-                  <Text style={styles.ingAmt}>{scaleAmount(ing.amount, factor)}</Text>
+                  <Text style={styles.ingName}>{ing.ingredientName}</Text>
+                  <Text style={styles.ingAmt}>
+                    {scaleAmount(`${ing.quantity ?? ''} ${ing.unit ?? ''}`.trim(), factor)}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -118,7 +179,7 @@ export default function MealDetailScreen() {
 
           {tab === 'instructions' && (
             <View style={{ gap: 14 }}>
-              {MOCK.instructions.map((step, i) => (
+              {steps.map((step, i) => (
                 <View key={i} style={styles.stepItem}>
                   <View style={styles.stepNum}>
                     <Text style={styles.stepNumT}>{i + 1}</Text>
@@ -131,11 +192,10 @@ export default function MealDetailScreen() {
 
           {tab === 'nutrition' && (
             <View style={styles.nutTable}>
-              {MOCK.nutrition.map((n) => (
+              {nutrition.map((n) => (
                 <View key={n.label} style={styles.nutRow}>
                   <Text style={styles.nutLabel}>{n.label}</Text>
                   <Text style={styles.nutVal}>{scaleAmount(n.value, factor)}</Text>
-                  <Text style={styles.nutPct}>{scaleAmount(n.pct, factor)}</Text>
                 </View>
               ))}
               <Text style={styles.nutNote}>
@@ -162,6 +222,7 @@ export default function MealDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { marginVertical: 20 },
   banner: { height: 160, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',

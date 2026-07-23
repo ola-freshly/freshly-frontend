@@ -4,6 +4,7 @@ import { mealPlansApi } from '@/api';
 
 export type PlannerDish = {
   id: string;
+  recipeId:string;
   title: string;
   cookTime: number;
   calories: number;
@@ -84,6 +85,7 @@ export const plannerStore = {
           title: item.recipe?.title ?? "Untitled",
           cookTime: Number(item.recipe?.cookTime ?? 0),
           calories: Number(item.recipe?.calories ?? 0),
+          recipeId:item.recipeId,
         };
         map.set(k,[...(map.get(k)??[]),dish])
       }

@@ -199,6 +199,7 @@ export default function MealSuggestionModal() {
       const acceptedItem = response.items[0];
 
       plannerStore.add(date, mealType as MealType, {
+        recipeId: acceptedItem?.recipeId ?? '',
         id: acceptedItem?.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         title: suggestion.title,
         cookTime: Number(suggestion.estimatedMinutes ?? 0),

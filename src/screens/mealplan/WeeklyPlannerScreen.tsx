@@ -105,7 +105,7 @@ export default function WeeklyPlannerScreen() {
                       onPress={() =>
                         router.push({
                           pathname: '/(app)/meal-detail',
-                          params: { id: dish.id, date: dayIso, mealType: meal.type },
+                          params: { id: dish.id, date: dayIso, mealType: meal.type, recipeId:dish.recipeId },
                         })
                       }
                     >
