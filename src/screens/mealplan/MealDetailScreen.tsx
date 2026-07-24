@@ -60,6 +60,7 @@ export default function MealDetailScreen() {
   }, [recipeId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; load() sets loading/error state by design
     void load();
   }, [load]);
 
