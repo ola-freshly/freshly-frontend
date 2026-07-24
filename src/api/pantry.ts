@@ -1,9 +1,21 @@
 import apiClient from './client';
-import type { PantryItem, CreatePantryItemDto, UpdatePantryItemDto, ScanResult } from './types';
+import type {
+  PantryItem,
+  PantryCategory,
+  CreatePantryItemDto,
+  UpdatePantryItemDto,
+  ScanResult,
+} from './types';
 
 export const pantryApi = {
   getAll: async (): Promise<PantryItem[]> => {
     const { data } = await apiClient.get<PantryItem[]>('/pantry-items');
+    return data;
+  },
+
+  // Categories with their allowed units — drives the add-item unit picker.
+  getCategories: async (): Promise<PantryCategory[]> => {
+    const { data } = await apiClient.get<PantryCategory[]>('/pantry-items/categories');
     return data;
   },
 

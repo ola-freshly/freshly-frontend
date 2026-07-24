@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pantryApi } from '@/api/pantry';
-import { FoodCategory, PantryItemSource } from '@/api/types';
+import { FoodCategory, PantryItemSource, type PantryUnit } from '@/api/types';
 import { showToastError, showToastSuccess } from '@/utils/toast';
 import { getErrorMessage } from '@/utils/apiError';
 import { validatePantryItem } from '@/utils/pantryValidation';
@@ -42,9 +42,52 @@ export default function AddItemScreen() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [unitsBySlug, setUnitsBySlug] = useState<Record<string, PantryUnit[]>>({});
+
+  // Load the category -> allowed-units map once. If it fails, the unit field
+  // gracefully falls back to free text (see availableUnits below).
+  useEffect(() => {
+    let active = true;
+    pantryApi
+      .getCategories()
+      .then((categories) => {
+        if (!active) return;
+        const map: Record<string, PantryUnit[]> = {};
+        categories.forEach((c) => {
+          map[c.slug] = c.units;
+        });
+        setUnitsBySlug(map);
+      })
+      .catch(() => {
+        // Non-fatal: fall back to a free-text unit input.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const allUnits = useMemo(() => {
+    const map = new Map<string, PantryUnit>();
+    Object.values(unitsBySlug).forEach((units) => units.forEach((u) => map.set(u.code, u)));
+    return Array.from(map.values());
+  }, [unitsBySlug]);
+
+  // Units to offer: the selected category's set, or every unit before a category
+  // is chosen. Empty (e.g. categories not loaded) means the free-text fallback.
+  const availableUnits = form.category ? (unitsBySlug[form.category] ?? []) : allUnits;
 
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Selecting a category clears the unit if it's no longer valid for it.
+  const selectCategory = (cat: FoodCategory) => {
+    setForm((prev) => {
+      const next = prev.category === cat ? '' : cat;
+      const allowed = next ? (unitsBySlug[next] ?? []).map((u) => u.code) : null;
+      const unit = allowed && !allowed.includes(prev.unit) ? '' : prev.unit;
+      return { ...prev, category: next, unit };
+    });
   };
 
   const validate = (): boolean => {
@@ -104,37 +147,13 @@ export default function AddItemScreen() {
       />
       {errors.name && <Text style={styles.error}>{errors.name}</Text>}
 
-      <View style={styles.row}>
-        <View style={styles.half}>
-          <Text style={styles.label}>Quantity *</Text>
-          <TextInput
-            style={styles.input}
-            value={form.quantity}
-            onChangeText={(v) => updateField('quantity', v)}
-            placeholder="2"
-            keyboardType="decimal-pad"
-          />
-          {errors.quantity && <Text style={styles.error}>{errors.quantity}</Text>}
-        </View>
-        <View style={styles.half}>
-          <Text style={styles.label}>Unit *</Text>
-          <TextInput
-            style={styles.input}
-            value={form.unit}
-            onChangeText={(v) => updateField('unit', v)}
-            placeholder="liters"
-          />
-          {errors.unit && <Text style={styles.error}>{errors.unit}</Text>}
-        </View>
-      </View>
-
       <Text style={styles.label}>Category</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
         {CATEGORIES.map((cat) => (
           <TouchableOpacity
             key={cat}
             style={[styles.chip, form.category === cat && styles.chipActive]}
-            onPress={() => updateField('category', form.category === cat ? '' : cat)}
+            onPress={() => selectCategory(cat)}
           >
             <Text style={[styles.chipText, form.category === cat && styles.chipTextActive]}>
               {cat}
@@ -142,6 +161,44 @@ export default function AddItemScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      <Text style={styles.label}>Quantity *</Text>
+      <TextInput
+        style={styles.input}
+        value={form.quantity}
+        onChangeText={(v) => updateField('quantity', v)}
+        placeholder="2"
+        keyboardType="decimal-pad"
+      />
+      {errors.quantity && <Text style={styles.error}>{errors.quantity}</Text>}
+
+      <Text style={styles.label}>Unit *</Text>
+      {availableUnits.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+          {availableUnits.map((u) => (
+            <TouchableOpacity
+              key={u.code}
+              style={[styles.chip, form.unit === u.code && styles.chipActive]}
+              onPress={() => updateField('unit', form.unit === u.code ? '' : u.code)}
+            >
+              <Text style={[styles.chipText, form.unit === u.code && styles.chipTextActive]}>
+                {u.code}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      ) : (
+        <TextInput
+          style={styles.input}
+          value={form.unit}
+          onChangeText={(v) => updateField('unit', v)}
+          placeholder="liters"
+        />
+      )}
+      {form.category ? null : (
+        <Text style={styles.hint}>Pick a category to narrow the unit options.</Text>
+      )}
+      {errors.unit && <Text style={styles.error}>{errors.unit}</Text>}
 
       <Text style={styles.label}>Expiry Date</Text>
       <TextInput
@@ -225,6 +282,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#fff' },
 
   error: { color: '#ef4444', fontSize: 12, marginTop: 4 },
+  hint: { color: '#6b7280', fontSize: 12, marginTop: 6 },
 
   submitBtn: {
     marginTop: 28,
