@@ -1,9 +1,19 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ACCENT, DANGER, MealType, MEALS } from './theme';
 import { plannerStore } from './store';
+import { mealPlansApi, Recipe, recipesApi } from '@/api';
+import { ErrorBar } from '@/components/ErrorBar';
 
 type Tab = 'ingredients' | 'instructions' | 'nutrition';
 
@@ -16,56 +26,78 @@ function scaleAmount(amount: string, factor: number): string {
   });
 }
 
-// --- MOCK DATA (replace with API later) ---
-const MOCK = {
-  title: 'Shrimp Tom Yum Soup',
-  category: 'Seafood',
-  rating: 4.5,
-  cookTime: 35,
-  servings: 1,
-  ingredients: [
-    { name: 'Shrimp', amount: '150 g' },
-    { name: 'Rice', amount: '80 g' },
-    { name: 'Pineapple', amount: '100 g' },
-    { name: 'Carrot', amount: '50 g' },
-    { name: 'Lemongrass', amount: '2 stalks' },
-    { name: 'Lime', amount: '1 pc' },
-  ],
-  instructions: [
-    'Bring 500 ml of water to a boil with the lemongrass.',
-    'Add the shrimp and cook for 2 minutes.',
-    'Add the carrots and pineapple, cook for another minute.',
-    'Season with lime juice and salt to taste.',
-  ],
-  nutrition: [
-    { label: 'Calories', value: '520 kcal', pct: '26%' },
-    { label: 'Fat', value: '18 g', pct: '23%' },
-    { label: 'Carbs', value: '45 g', pct: '15%' },
-    { label: 'Protein', value: '30 g', pct: '60%' },
-  ],
-};
-
 export default function MealDetailScreen() {
   const router = useRouter();
-  const { id, date, mealType } = useLocalSearchParams<{
+  const { id, recipeId, date, mealType } = useLocalSearchParams<{
     id?: string;
+    recipeId?: string;
     date?: string;
     mealType?: string;
   }>();
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('ingredients');
-  const [servings, setServings] = useState(MOCK.servings);
-  const factor = servings / MOCK.servings;
+  const [servings, setServings] = useState<number>(1);
+
+  const load = useCallback(async () => {
+    if (!recipeId) {
+      setError('Missing recipeId');
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await recipesApi.getRecipeById(recipeId);
+      setRecipe(data);
+      setServings(data.servings ?? 1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to fetch recipes');
+    } finally {
+      setLoading(false);
+    }
+  }, [recipeId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Scale ingredient/nutrition amounts relative to the recipe's base servings.
+  const factor = servings / (recipe?.servings ?? 1);
   const mealColor = MEALS.find((m) => m.type === mealType)?.color ?? ACCENT;
 
+  // API stores instructions as one string; render as numbered steps.
+  const steps = (recipe?.instructions ?? '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // Build nutrition rows from the flat recipe fields (the API has no array).
+  const nutrition = recipe
+    ? [
+        { label: 'Calories', value: `${Number(recipe.calories ?? 0)} kcal` },
+        { label: 'Protein', value: `${Number(recipe.protein ?? 0)} g` },
+        { label: 'Carbs', value: `${Number(recipe.carbs ?? 0)} g` },
+        { label: 'Fat', value: `${Number(recipe.fat ?? 0)} g` },
+      ]
+    : [];
+
   const remove = () => {
-    Alert.alert('Remove dish?', `“${MOCK.title}” will be removed from this meal.`, [
+    Alert.alert('Remove dish?', `“${recipe?.title}” will be removed from this meal.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: () => {
-          if (id && date && mealType) plannerStore.remove(date, mealType as MealType, id);
-          router.back();
+        onPress: async () => {
+          if (!id || !date || !mealType) return;
+          try {
+            await mealPlansApi.remove(id);
+            plannerStore.remove(date, mealType as MealType, id);
+            router.back();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to remove dish.');
+          }
         },
       },
     ]);
@@ -78,18 +110,19 @@ export default function MealDetailScreen() {
         <View style={[styles.banner, { backgroundColor: mealColor }]}>
           <Ionicons name="fish-outline" size={54} color="#fff" />
           <View style={styles.badge}>
-            <Text style={styles.badgeT}>{MOCK.category}</Text>
+            <Text style={styles.badgeT}>{recipe?.cuisine}</Text>
           </View>
         </View>
 
+        {error ? <ErrorBar message={error} onRetry={() => load()} /> : null}
+
+        {loading && <ActivityIndicator color={ACCENT} style={styles.loader} />}
+
         <View style={{ padding: 20, gap: 12 }}>
-          <Text style={styles.title}>{MOCK.title}</Text>
+          <Text style={styles.title}>{recipe?.title}</Text>
           <View style={styles.metaRow}>
-            <Ionicons name="star" size={13} color="#F59E0B" />
-            <Text style={styles.meta}>{MOCK.rating}</Text>
-            <Text style={styles.metaDot}>·</Text>
             <Ionicons name="time-outline" size={13} color="#888" />
-            <Text style={styles.meta}>{MOCK.cookTime} min</Text>
+            <Text style={styles.meta}>{recipe?.cookTime} min</Text>
             <Text style={styles.metaDot}>·</Text>
             <Ionicons name="person-outline" size={13} color="#888" />
             <Text style={styles.meta}>
@@ -133,13 +166,15 @@ export default function MealDetailScreen() {
                   </Pressable>
                 </View>
               </View>
-              {MOCK.ingredients.map((ing) => (
-                <View key={ing.name} style={styles.ingRow}>
+              {(recipe?.ingredients ?? []).map((ing) => (
+                <View key={ing.ingredientName} style={styles.ingRow}>
                   <View style={styles.ingIcon}>
                     <Ionicons name="ellipse" size={10} color={ACCENT} />
                   </View>
-                  <Text style={styles.ingName}>{ing.name}</Text>
-                  <Text style={styles.ingAmt}>{scaleAmount(ing.amount, factor)}</Text>
+                  <Text style={styles.ingName}>{ing.ingredientName}</Text>
+                  <Text style={styles.ingAmt}>
+                    {scaleAmount(`${ing.quantity ?? ''} ${ing.unit ?? ''}`.trim(), factor)}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -147,7 +182,7 @@ export default function MealDetailScreen() {
 
           {tab === 'instructions' && (
             <View style={{ gap: 14 }}>
-              {MOCK.instructions.map((step, i) => (
+              {steps.map((step, i) => (
                 <View key={i} style={styles.stepItem}>
                   <View style={styles.stepNum}>
                     <Text style={styles.stepNumT}>{i + 1}</Text>
@@ -160,11 +195,10 @@ export default function MealDetailScreen() {
 
           {tab === 'nutrition' && (
             <View style={styles.nutTable}>
-              {MOCK.nutrition.map((n) => (
+              {nutrition.map((n) => (
                 <View key={n.label} style={styles.nutRow}>
                   <Text style={styles.nutLabel}>{n.label}</Text>
                   <Text style={styles.nutVal}>{scaleAmount(n.value, factor)}</Text>
-                  <Text style={styles.nutPct}>{scaleAmount(n.pct, factor)}</Text>
                 </View>
               ))}
               <Text style={styles.nutNote}>
@@ -191,6 +225,7 @@ export default function MealDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  loader: { marginVertical: 20 },
   banner: { height: 160, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',
@@ -281,7 +316,6 @@ const styles = StyleSheet.create({
   },
   nutLabel: { flex: 1, fontSize: 15, color: '#333' },
   nutVal: { fontSize: 15, fontWeight: '600', color: '#111', marginRight: 16 },
-  nutPct: { fontSize: 13, color: '#999', width: 44, textAlign: 'right' },
   nutNote: { fontSize: 11, color: '#AAA', marginTop: 8 },
   bottomBar: {
     flexDirection: 'row',

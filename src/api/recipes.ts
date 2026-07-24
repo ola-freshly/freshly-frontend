@@ -2,8 +2,10 @@ import client from './client';
 import type { CreateRecipeRequest, GenerateRecipeRequest, GeneratedRecipe, Recipe } from './types';
 
 export const recipesApi = {
-  async getRecipes(): Promise<Recipe[]> {
-    const { data } = await client.get<Recipe[]>('/recipes');
+  async getRecipes(mealType?: string): Promise<Recipe[]> {
+    const { data } = await client.get<Recipe[]>('/recipes', {
+      params: mealType ? { mealType } : undefined,
+    });
     return data;
   },
 

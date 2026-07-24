@@ -62,6 +62,19 @@ export type AcceptRecommendation = {
   }[];
 };
 
+export type MealPlanItemRecord = {
+  id: string;
+  mealPlanId: string;
+  recipeId: string;
+  mealDate: string;
+  mealType: string;
+  recipe?: {
+    title: string;
+    cookTime?: number | null;
+    calories?: number | string | null;
+  };
+};
+
 function normalisePlans(value: unknown): MealPlan[] {
   if (Array.isArray(value)) {
     return value as MealPlan[];
@@ -84,6 +97,28 @@ export const mealPlansApi = {
   async list(): Promise<MealPlan[]> {
     const response = await client.get('/meal-plans');
     return normalisePlans(response.data);
+  },
+
+  async remove(id: string): Promise<void> {
+    await client.delete(`/meal-plan-items/${id}`);
+  },
+
+  async attachRecipe(payload: {
+    mealPlanId: string;
+    recipeId: string;
+    mealDate: string;
+    mealType: string;
+  }): Promise<MealPlanItemRecord> {
+    const response = await client.post<MealPlanItemRecord>('/meal-plan-items', payload);
+    return response.data;
+  },
+
+  // All items across the user's plans within [from, to] — one request per week.
+  async itemsByRange(from: string, to: string): Promise<MealPlanItemRecord[]> {
+    const response = await client.get<MealPlanItemRecord[]>('/meal-plan-items', {
+      params: { from, to },
+    });
+    return response.data;
   },
 
   async create(payload: { name: string; startDate: string; endDate: string }): Promise<MealPlan> {

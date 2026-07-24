@@ -5,6 +5,7 @@ describe('meal planner store', () => {
 
   const firstDish: PlannerDish = {
     id: 'dish-1',
+    recipeId: 'recipe-1',
     title: 'Chicken Rice',
     cookTime: 25,
     calories: 450,
@@ -12,6 +13,7 @@ describe('meal planner store', () => {
 
   const secondDish: PlannerDish = {
     id: 'dish-2',
+    recipeId: 'recipe-2',
     title: 'Vegetable Soup',
     cookTime: 20,
     calories: 300,

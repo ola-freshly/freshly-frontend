@@ -6,17 +6,22 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBar } from '@/components/ErrorBar';
+import { MealTypeFilter } from '@/components/MealTypeFilter';
+import { MEALS } from '@/screens/mealplan/theme';
 import { tapLight } from '@/utils/haptics';
-import { useRecipes } from '@/screens/recipes/use-recipes';
+import { useCategoryRecipes } from '@/hooks/use-category-recipes';
 
 const ACCENT = '#16A34A';
 const ACCENT_LIGHT = '#F0FDF4';
 
-export default function RecipesScreen() {
-  const { recipes, loading, refreshing, error, reload, refresh } = useRecipes();
+const mealLabel = (mealType?: string) => MEALS.find((m) => m.type === mealType)?.label ?? null;
 
-  // Reload whenever the tab regains focus so the list stays fresh after a recipe
-  // is created, generated, or deleted on another screen.
+export default function RecipesScreen() {
+  const { category, setCategory, recipes, loading, error, refreshing, reload, refresh } =
+    useCategoryRecipes();
+
+  // Refresh when the tab regains focus so the list stays fresh after a recipe is
+  // created, generated, or deleted on another screen.
   useFocusEffect(
     useCallback(() => {
       reload();
@@ -50,11 +55,14 @@ export default function RecipesScreen() {
     </View>
   );
 
-  // ----- Loading (first load): skeleton cards -----
+  const Filter = <MealTypeFilter value={category} onChange={setCategory} />;
+
+  // ----- Loading (first load / category switch): skeleton cards -----
   if (loading && !refreshing) {
     return (
       <View style={styles.container}>
         {ActionRow}
+        {Filter}
         <View style={styles.listContent}>
           {[...Array(5)].map((_, i) => (
             <View key={i} style={styles.skeletonCard}>
@@ -73,6 +81,7 @@ export default function RecipesScreen() {
   return (
     <View style={styles.container}>
       {ActionRow}
+      {Filter}
 
       {error ? <ErrorBar message={error} onRetry={reload} /> : null}
 
@@ -89,38 +98,46 @@ export default function RecipesScreen() {
             colors={[ACCENT]}
           />
         }
-        renderItem={({ item, index }) => (
-          <Animated.View
-            entering={FadeInDown.delay(index * 30)
-              .springify()
-              .damping(30)}
-          >
-            <TouchableOpacity
-              style={styles.card}
-              activeOpacity={0.8}
-              onPress={() => {
-                tapLight();
-                router.push({ pathname: '/recipe-detail', params: { id: item.id } });
-              }}
+        renderItem={({ item, index }) => {
+          const label = mealLabel(item.mealType);
+          return (
+            <Animated.View
+              entering={FadeInDown.delay(index * 30)
+                .springify()
+                .damping(30)}
             >
-              <View style={styles.cardIcon}>
-                <Ionicons name="restaurant-outline" size={22} color={ACCENT} />
-              </View>
-              <View style={styles.cardBody}>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.subtitle}>
-                  {item.cookTime ?? 0} min • {item.servings ?? 0} servings
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#C4C4C4" />
-            </TouchableOpacity>
-          </Animated.View>
-        )}
+              <TouchableOpacity
+                style={styles.card}
+                activeOpacity={0.8}
+                onPress={() => {
+                  tapLight();
+                  router.push({ pathname: '/recipe-detail', params: { id: item.id } });
+                }}
+              >
+                <View style={styles.cardIcon}>
+                  <Ionicons name="restaurant-outline" size={22} color={ACCENT} />
+                </View>
+                <View style={styles.cardBody}>
+                  <Text style={styles.title}>{item.title}</Text>
+                  <Text style={styles.subtitle}>
+                    {item.cookTime ?? 0} min • {item.servings ?? 0} servings
+                  </Text>
+                </View>
+                {label ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{label}</Text>
+                  </View>
+                ) : null}
+                <Ionicons name="chevron-forward" size={20} color="#C4C4C4" />
+              </TouchableOpacity>
+            </Animated.View>
+          );
+        }}
         ListEmptyComponent={
           !error ? (
             <EmptyState
               icon="restaurant-outline"
-              title="No recipes yet"
+              title={category === 'all' ? 'No recipes yet' : `No ${category} recipes yet`}
               subtitle="Create your own recipe or generate one with AI to get started."
               actionLabel="Create your first recipe"
               onAction={() => goTo('/create-recipe')}
@@ -189,6 +206,16 @@ const styles = StyleSheet.create({
   cardBody: { flex: 1, gap: 4 },
   title: { fontSize: 16, fontWeight: '700', color: '#111827' },
   subtitle: { color: '#6B7280', fontSize: 13 },
+
+  badge: {
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: ACCENT_LIGHT,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  badgeText: { fontSize: 11, fontWeight: '700', color: ACCENT },
 
   // Loading skeletons
   skeletonCard: {

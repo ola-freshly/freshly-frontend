@@ -58,6 +58,8 @@ export interface Recipe {
   protein?: number;
   carbs?: number;
   fat?: number;
+  // Category: breakfast | lunch | dinner | snack (may be null for older recipes).
+  mealType?: string;
   // Only populated by GET /recipes/:id (findOne), not the list endpoint.
   ingredients?: RecipeIngredientInput[];
 }
@@ -79,6 +81,9 @@ export interface CreateRecipeRequest {
   protein?: number;
   carbs?: number;
   fat?: number;
+  mealType?: string;
+  // 'plan' keeps the recipe out of the library (attached to a meal plan only).
+  source?: 'library' | 'plan';
   ingredients: RecipeIngredientInput[];
 }
 
