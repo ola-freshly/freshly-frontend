@@ -80,7 +80,11 @@ export default function PantryScreen() {
     setSelectedIds(new Set());
   };
 
-  const doMerge = async (payload: { primaryId: string; expiryDate?: string | null }) => {
+  const doMerge = async (payload: {
+    primaryId: string;
+    name?: string;
+    expiryDate?: string | null;
+  }) => {
     setMerging(true);
     try {
       await mergeItems({ itemIds: [...selectedIds], ...payload });

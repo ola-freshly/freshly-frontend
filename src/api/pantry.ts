@@ -46,6 +46,7 @@ export const pantryApi = {
   merge: async (payload: {
     itemIds: string[];
     primaryId: string;
+    name?: string;
     expiryDate?: string | null;
   }): Promise<PantryItem> => {
     const { data } = await apiClient.post<PantryItem>('/pantry-items/merge', payload);

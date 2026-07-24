@@ -40,7 +40,12 @@ export function usePantry() {
   );
 
   const mergeItems = useCallback(
-    async (payload: { itemIds: string[]; primaryId: string; expiryDate?: string | null }) => {
+    async (payload: {
+      itemIds: string[];
+      primaryId: string;
+      name?: string;
+      expiryDate?: string | null;
+    }) => {
       const merged = await pantryApi.merge(payload);
       // Replace the primary in place and drop the merged-away rows.
       setItems((prev) =>
