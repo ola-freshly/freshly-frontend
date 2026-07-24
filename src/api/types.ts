@@ -141,6 +141,19 @@ export enum PantryItemSource {
   BARCODE = 'barcode',
 }
 
+export interface PantryUnit {
+  code: string;
+  label: string;
+}
+
+// A food category together with the units valid for it (category_units).
+export interface PantryCategory {
+  id: string;
+  name: string;
+  slug: string;
+  units: PantryUnit[];
+}
+
 export interface PantryItem {
   id: string;
   name: string;

@@ -122,6 +122,7 @@ export default function WeeklyPlannerScreen() {
         </View>
       )}
 
+      {/* eslint-disable-next-line react-hooks/refs -- stable Animated.Values created once; the Animated API reads them in render by design */}
       {days.map((day, index) => {
         const dayIso = iso(day);
         const dayKcal = kcalOf(dayIso);
