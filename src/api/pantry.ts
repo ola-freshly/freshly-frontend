@@ -41,6 +41,17 @@ export const pantryApi = {
     return data;
   },
 
+  // Merges several items into one. `expiryDate` resolves a conflict (a date, or
+  // null for "no expiry"); omit it when the items already share one expiry.
+  merge: async (payload: {
+    itemIds: string[];
+    primaryId: string;
+    expiryDate?: string | null;
+  }): Promise<PantryItem> => {
+    const { data } = await apiClient.post<PantryItem>('/pantry-items/merge', payload);
+    return data;
+  },
+
   scanImage: async (file: { uri: string; name: string; type: string }): Promise<ScanResult> => {
     const formData = new FormData();
     formData.append('image', file as unknown as Blob);

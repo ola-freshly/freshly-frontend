@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { usePantry } from '@/screens/pantry/use-pantry';
 import { usePantryForm } from '@/screens/pantry/use-pantry-form';
 import { PantryRow } from '@/screens/pantry/pantry-row';
 import { PantryItemSheet } from '@/screens/pantry/pantry-item-sheet';
+import { PantryMergeModal } from '@/screens/pantry/pantry-merge-modal';
 import { buildSections } from '@/screens/pantry/pantry-utils';
 import { ACCENT, ACCENT_LIGHT, MUTED, TEXT } from '@/screens/pantry/pantry-theme';
 
@@ -36,8 +37,15 @@ export default function PantryScreen() {
     addItem,
     editItem,
     deleteItem,
+    mergeItems,
   } = usePantry();
   const form = usePantryForm();
+
+  // Multi-select + merge state.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [merging, setMerging] = useState(false);
 
   // Reload on focus so the list re-mounts each visit — this both keeps the
   // pantry fresh and replays the row entrance animation, matching RecipesScreen.
@@ -48,6 +56,42 @@ export default function PantryScreen() {
   );
 
   const sections = useMemo(() => buildSections(items), [items]);
+  const selectedItems = useMemo(
+    () => items.filter((i) => selectedIds.has(i.id)),
+    [items, selectedIds],
+  );
+
+  const enterSelect = (id: string) => {
+    setSelectMode(true);
+    setSelectedIds(new Set([id]));
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const cancelSelect = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const doMerge = async (payload: { primaryId: string; expiryDate?: string | null }) => {
+    setMerging(true);
+    try {
+      await mergeItems({ itemIds: [...selectedIds], ...payload });
+      setMergeOpen(false);
+      cancelSelect();
+    } catch (e) {
+      Alert.alert('Merge failed', getErrorMessage(e, 'Could not merge the items.'));
+    } finally {
+      setMerging(false);
+    }
+  };
 
   const submit = async () => {
     const dto = form.buildDto();
@@ -77,7 +121,19 @@ export default function PantryScreen() {
     }
   };
 
-  const Header = (
+  const Header = selectMode ? (
+    <View style={[styles.header, styles.selectHeader, { paddingTop: insets.top }]}>
+      <Pressable onPress={cancelSelect} hitSlop={10}>
+        <Text style={styles.selectAction}>Cancel</Text>
+      </Pressable>
+      <Text style={styles.selectCount}>{selectedIds.size} selected</Text>
+      <Pressable onPress={() => setMergeOpen(true)} disabled={selectedIds.size < 2} hitSlop={10}>
+        <Text style={[styles.selectAction, selectedIds.size < 2 && styles.selectActionDisabled]}>
+          Merge
+        </Text>
+      </Pressable>
+    </View>
+  ) : (
     <View style={[styles.header, { paddingTop: insets.top }]}>
       <Text style={styles.headerTitle}>Pantry</Text>
       <Text style={styles.headerCount}>
@@ -125,7 +181,13 @@ export default function PantryScreen() {
               .springify()
               .damping(30)}
           >
-            <PantryRow item={item} onPress={() => form.openEdit(item)} />
+            <PantryRow
+              item={item}
+              selectable={selectMode}
+              selected={selectedIds.has(item.id)}
+              onPress={() => (selectMode ? toggleSelect(item.id) : form.openEdit(item))}
+              onLongPress={() => enterSelect(item.id)}
+            />
           </Animated.View>
         )}
         renderSectionHeader={({ section }) => (
@@ -156,11 +218,22 @@ export default function PantryScreen() {
         }
       />
 
-      <Pressable style={[styles.fab, { bottom: insets.bottom + 24 }]} onPress={form.openAdd}>
-        <Ionicons name="add" size={30} color="#fff" />
-      </Pressable>
+      {!selectMode && (
+        <Pressable style={[styles.fab, { bottom: insets.bottom + 24 }]} onPress={form.openAdd}>
+          <Ionicons name="add" size={30} color="#fff" />
+        </Pressable>
+      )}
 
       <PantryItemSheet form={form} onSubmit={submit} onDelete={removeCurrent} />
+
+      <PantryMergeModal
+        key={selectedItems.map((i) => i.id).join(',')}
+        visible={mergeOpen}
+        items={selectedItems}
+        submitting={merging}
+        onCancel={() => setMergeOpen(false)}
+        onConfirm={doMerge}
+      />
     </View>
   );
 }
@@ -170,6 +243,14 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 12 },
   headerTitle: { fontSize: 28, fontWeight: '700', color: TEXT },
   headerCount: { fontSize: 14, color: MUTED, marginTop: 2 },
+  selectHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectCount: { fontSize: 16, fontWeight: '700', color: TEXT },
+  selectAction: { fontSize: 16, fontWeight: '600', color: ACCENT },
+  selectActionDisabled: { color: '#C4C4C4' },
   sectionHeader: {
     fontSize: 13,
     fontWeight: '600',

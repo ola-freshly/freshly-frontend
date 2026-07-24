@@ -1,14 +1,30 @@
 import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { PantryItem } from '@/api/types';
-import { ACCENT_DIM, BORDER, MUTED, TEXT } from './pantry-theme';
+import { ACCENT, ACCENT_DIM, BORDER, MUTED, TEXT } from './pantry-theme';
 import { expiryInfo, fmtQty, metaOf, slugOf } from './pantry-utils';
 
-export function PantryRow({ item, onPress }: { item: PantryItem; onPress: () => void }) {
+export function PantryRow({
+  item,
+  onPress,
+  onLongPress,
+  selectable = false,
+  selected = false,
+}: {
+  item: PantryItem;
+  onPress: () => void;
+  onLongPress?: () => void;
+  selectable?: boolean;
+  selected?: boolean;
+}) {
   const meta = metaOf(slugOf(item));
   const exp = expiryInfo(item.expiryDate);
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable
+      style={[styles.row, selected && styles.rowSelected]}
+      onPress={onPress}
+      onLongPress={onLongPress}
+    >
       {item.imageUrl ? (
         <Image source={{ uri: item.imageUrl }} style={styles.avatar} />
       ) : (
@@ -27,7 +43,15 @@ export function PantryRow({ item, onPress }: { item: PantryItem; onPress: () => 
           <Text style={[styles.expText, { color: exp.color }]}>{exp.label}</Text>
         </View>
       )}
-      <Ionicons name="chevron-forward" size={20} color="#C4C4C4" />
+      {selectable ? (
+        <Ionicons
+          name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+          size={24}
+          color={selected ? ACCENT : '#C4C4C4'}
+        />
+      ) : (
+        <Ionicons name="chevron-forward" size={20} color="#C4C4C4" />
+      )}
     </Pressable>
   );
 }
@@ -42,6 +66,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: BORDER,
   },
+  rowSelected: { backgroundColor: ACCENT_DIM },
   avatar: {
     width: 46,
     height: 46,

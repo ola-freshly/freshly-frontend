@@ -39,6 +39,19 @@ export function usePantry() {
     [setItems],
   );
 
+  const mergeItems = useCallback(
+    async (payload: { itemIds: string[]; primaryId: string; expiryDate?: string | null }) => {
+      const merged = await pantryApi.merge(payload);
+      // Replace the primary in place and drop the merged-away rows.
+      setItems((prev) =>
+        prev
+          .map((i) => (i.id === merged.id ? merged : i))
+          .filter((i) => i.id === merged.id || !payload.itemIds.includes(i.id)),
+      );
+    },
+    [setItems],
+  );
+
   return {
     items,
     loading,
@@ -50,5 +63,6 @@ export function usePantry() {
     addItem,
     editItem,
     deleteItem,
+    mergeItems,
   };
 }
