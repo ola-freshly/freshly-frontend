@@ -21,7 +21,6 @@ const GREEN_DIM = '#DCFCE7';
 export default function EditProfileScreen() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
@@ -37,7 +36,6 @@ export default function EditProfileScreen() {
     usersApi.getMe().then((profile) => {
       setFullName(profile.name ?? '');
       setPhone(profile.phone ?? '');
-      setEmail(profile.email ?? '');
       if (profile.height != null) setHeight(String(profile.height));
       if (profile.weight != null) setWeight(String(profile.weight));
     });
@@ -50,7 +48,7 @@ export default function EditProfileScreen() {
 
   const validate = (): boolean => {
     const next: typeof errors = {};
-    if (!fullName.trim()) next.fullName = 'Full name is required';
+    if (!fullName.trim()) next.fullName = 'Display name is required';
     else if (fullName.trim().length < 2) next.fullName = 'Name must be at least 2 characters';
     if (phone && !/^\+?[\d\s\-()]{7,15}$/.test(phone)) next.phone = 'Enter a valid phone number';
     if (height) {
@@ -158,7 +156,7 @@ export default function EditProfileScreen() {
         <View style={{ gap: 20 }}>
           <View style={{ gap: 7 }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>
-              Full name <Text style={{ color: GREEN }}>*</Text>
+              Display name <Text style={{ color: GREEN }}>*</Text>
             </Text>
             <View
               style={{
@@ -344,46 +342,6 @@ export default function EditProfileScreen() {
                   {errors.weight}
                 </Text>
               ) : null}
-            </View>
-          </View>
-
-          <View style={{ gap: 7 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>
-              Email address <Text style={{ color: GREEN }}>*</Text>
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                height: 52,
-                borderRadius: 14,
-                borderCurve: 'continuous',
-                borderWidth: 1.5,
-                paddingHorizontal: 14,
-                gap: 10,
-                ...fieldStyle('email'),
-              }}
-            >
-              <Image
-                source="sf:envelope"
-                style={{ width: 17, height: 17 }}
-                tintColor="#9CA3AF"
-                contentFit="contain"
-              />
-              <TextInput
-                style={{ flex: 1, fontSize: 15, color: '#111827' }}
-                placeholder="you@example.com"
-                placeholderTextColor="#C4C9D4"
-                value={email}
-                onChangeText={setEmail}
-                onFocus={() => setFocused('email')}
-                onBlur={() => setFocused(null)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="done"
-                editable={!loading}
-              />
             </View>
           </View>
         </View>

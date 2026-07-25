@@ -50,7 +50,7 @@ export default function ProfileSetupScreen() {
 
   const validate = (): boolean => {
     const next: typeof errors = {};
-    if (!fullName.trim()) next.fullName = 'Full name is required';
+    if (!fullName.trim()) next.fullName = 'Display name is required';
     else if (fullName.trim().length < 2) next.fullName = 'Name must be at least 2 characters';
     if (phone && !/^\+?[\d\s\-()]{7,15}$/.test(phone)) next.phone = 'Enter a valid phone number';
     if (height) {
@@ -173,7 +173,7 @@ export default function ProfileSetupScreen() {
         <View style={{ gap: 20 }}>
           <View style={{ gap: 7 }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>
-              Full name <Text style={{ color: GREEN }}>*</Text>
+              Display name <Text style={{ color: GREEN }}>*</Text>
             </Text>
             <View
               style={{
