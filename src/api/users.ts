@@ -7,12 +7,18 @@ export interface UserProfile {
   name: string;
   phone?: string | null;
   avatarUrl?: string | null;
+  height?: number | null;
+  weight?: number | null;
+  bmi?: number | null;
+  preferredPlan?: string | null;
 }
 
 export interface UpdateProfilePayload {
   name?: string;
   phone?: string;
   avatarUrl?: string | null;
+  height?: number;
+  weight?: number;
 }
 
 export const usersApi = {
