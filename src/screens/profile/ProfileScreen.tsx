@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usersApi, UserProfile } from '@/api/users';
 
@@ -16,9 +16,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  useEffect(() => {
-    usersApi.getMe().then(setProfile);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      usersApi.getMe().then(setProfile);
+    }, []),
+  );
 
   async function handleLogout() {
     await logout();
