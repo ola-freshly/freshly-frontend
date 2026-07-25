@@ -1,5 +1,4 @@
 import client from './client';
-import type { ApiResponse } from './types';
 
 export interface UserProfile {
   id: string;
@@ -23,12 +22,12 @@ export interface UpdateProfilePayload {
 
 export const usersApi = {
   getMe: async (): Promise<UserProfile> => {
-    const res = await client.get<ApiResponse<UserProfile>>('/users/me');
-    return res.data.data;
+    const res = await client.get<UserProfile>('/users/me');
+    return res.data;
   },
 
   updateMe: async (payload: UpdateProfilePayload): Promise<UserProfile> => {
-    const res = await client.patch<ApiResponse<UserProfile>>('/users/me', payload);
-    return res.data.data;
+    const res = await client.patch<UserProfile>('/users/me', payload);
+    return res.data;
   },
 };
