@@ -253,9 +253,7 @@ export default function EditProfileScreen() {
 
           <View style={{ flexDirection: 'row', gap: 14 }}>
             <View style={{ flex: 1, gap: 7 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>
-                Height (cm)
-              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>Height (cm)</Text>
               <View
                 style={{
                   flexDirection: 'row',
@@ -299,9 +297,7 @@ export default function EditProfileScreen() {
             </View>
 
             <View style={{ flex: 1, gap: 7 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>
-                Weight (kg)
-              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>Weight (kg)</Text>
               <View
                 style={{
                   flexDirection: 'row',
