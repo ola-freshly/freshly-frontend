@@ -56,9 +56,9 @@ export const pantryApi = {
   scanImage: async (file: { uri: string; name: string; type: string }): Promise<ScanResult> => {
     const formData = new FormData();
     formData.append('image', file as unknown as Blob);
-    const { data } = await apiClient.post<ScanResult>('/pantry-items/scan-image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Don't set Content-Type manually — let the runtime add it *with* the
+    // multipart boundary, otherwise the server can't parse the file part.
+    const { data } = await apiClient.post<ScanResult>('/pantry-items/scan-image', formData);
     return data;
   },
 

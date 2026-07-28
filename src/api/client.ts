@@ -15,6 +15,12 @@ client.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // For multipart uploads, drop the default application/json so the runtime sets
+  // Content-Type with the correct boundary — otherwise the server can't parse
+  // the file part (@UploadedFile() comes back undefined).
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
 
