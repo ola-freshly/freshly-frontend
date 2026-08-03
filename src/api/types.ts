@@ -193,3 +193,15 @@ export interface ScanResult {
   usageInstruction: string | null;
   confidence: number;
 }
+
+export interface Paginated<T> {
+  items: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export interface GetRecipesParams {
+  mealType?: string;
+  cursor?: string | null;
+  limit?: number;
+}

@@ -1,11 +1,21 @@
 import client from './client';
-import type { CreateRecipeRequest, GenerateRecipeRequest, GeneratedRecipe, Recipe } from './types';
+import type {
+  CreateRecipeRequest,
+  GenerateRecipeRequest,
+  GeneratedRecipe,
+  Recipe,
+  GetRecipesParams,
+  Paginated,
+} from './types';
 
 export const recipesApi = {
-  async getRecipes(mealType?: string): Promise<Recipe[]> {
-    const { data } = await client.get<Recipe[]>('/recipes', {
-      params: mealType ? { mealType } : undefined,
-    });
+  async getRecipes(params: GetRecipesParams = {}): Promise<Paginated<Recipe>> {
+    const query: Record<string, string | number> = {};
+    if (params.mealType) query.mealType = params.mealType;
+    if (params.cursor) query.cursor = params.cursor;
+    if (params.limit !== undefined) query.limit = params.limit;
+
+    const { data } = await client.get<Paginated<Recipe>>('/recipes', { params: query });
     return data;
   },
 
