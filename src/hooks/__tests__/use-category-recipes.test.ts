@@ -93,6 +93,49 @@ describe('useCategoryRecipes', () => {
     expect(result.current.recipes.map((r) => r.id)).toEqual(['a', 'b']);
   });
 
+  it('sends the search term to the server after the debounce', async () => {
+    jest.useFakeTimers();
+    try {
+      const { result, rerender } = await renderHook(
+        ({ search }: { search: string }) => useCategoryRecipes('all', search),
+        { initialProps: { search: '' } },
+      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+
+      await rerender({ search: 'cur' });
+      await rerender({ search: 'curry' });
+
+      // Still debouncing — no request per keystroke.
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(mockedGet).toHaveBeenCalledTimes(2);
+      expect(mockedGet).toHaveBeenLastCalledWith({
+        mealType: undefined,
+        q: 'curry',
+        cursor: null,
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('omits q for a whitespace-only search', async () => {
+    const { result } = await renderHook(() => useCategoryRecipes('all', '   '));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(mockedGet).toHaveBeenCalledWith({
+      mealType: undefined,
+      q: undefined,
+      cursor: null,
+    });
+  });
+
   it('exposes retry so a failed page can be recovered', async () => {
     const { result } = await renderHook(() => useCategoryRecipes());
     await waitFor(() => expect(result.current.loading).toBe(false));

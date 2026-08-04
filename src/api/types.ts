@@ -202,6 +202,9 @@ export interface Paginated<T> {
 
 export interface GetRecipesParams {
   mealType?: string;
+  // Free-text title search, applied server-side so it covers the whole library
+  // rather than only the pages already downloaded.
+  q?: string;
   cursor?: string | null;
   limit?: number;
 }

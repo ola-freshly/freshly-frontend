@@ -12,6 +12,7 @@ export const recipesApi = {
   async getRecipes(params: GetRecipesParams = {}): Promise<Paginated<Recipe>> {
     const query: Record<string, string | number> = {};
     if (params.mealType) query.mealType = params.mealType;
+    if (params.q) query.q = params.q;
     if (params.cursor) query.cursor = params.cursor;
     if (params.limit !== undefined) query.limit = params.limit;
 

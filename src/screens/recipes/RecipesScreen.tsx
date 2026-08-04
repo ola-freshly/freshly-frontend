@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBar } from '@/components/ErrorBar';
+import { ListFooter } from '@/components/ListFooter';
 import { MealTypeFilter } from '@/components/MealTypeFilter';
 import { MEALS } from '@/screens/mealplan/theme';
 import { tapLight } from '@/utils/haptics';
@@ -17,15 +18,33 @@ const ACCENT_LIGHT = '#F0FDF4';
 const mealLabel = (mealType?: string) => MEALS.find((m) => m.type === mealType)?.label ?? null;
 
 export default function RecipesScreen() {
-  const { category, setCategory, recipes, loading, error, refreshing, reload, refresh } =
-    useCategoryRecipes();
+  const {
+    category,
+    setCategory,
+    recipes,
+    loading,
+    loadingMore,
+    error,
+    refreshing,
+    hasMore,
+    loadMore,
+    retry,
+    reload,
+    refresh,
+    revalidate,
+  } = useCategoryRecipes();
 
   // Refresh when the tab regains focus so the list stays fresh after a recipe is
   // created, generated, or deleted on another screen.
+  //
+  // revalidate rather than reload: reload would discard every loaded page while
+  // FlatList keeps the current scroll offset, stranding a deep-scrolled user
+  // past the end of the data. Merging a fresh first page still surfaces new
+  // recipes, which sort to the head.
   useFocusEffect(
     useCallback(() => {
-      reload();
-    }, [reload]),
+      void revalidate();
+    }, [revalidate]),
   );
 
   const goTo = (path: '/create-recipe' | '/generate-recipe') => {
@@ -98,11 +117,26 @@ export default function RecipesScreen() {
             colors={[ACCENT]}
           />
         }
+        onEndReached={() => {
+          void loadMore();
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          <ListFooter
+            loadingMore={loadingMore}
+            hasMore={hasMore}
+            error={error}
+            itemCount={recipes.length}
+            onRetry={retry}
+          />
+        }
         renderItem={({ item, index }) => {
           const label = mealLabel(item.mealType);
           return (
             <Animated.View
-              entering={FadeInDown.delay(index * 30)
+              // Cap the stagger: on page 2+ a raw index would delay cards by
+              // 600ms or more, which reads as lag rather than polish.
+              entering={FadeInDown.delay(Math.min(index, 10) * 30)
                 .springify()
                 .damping(30)}
             >
