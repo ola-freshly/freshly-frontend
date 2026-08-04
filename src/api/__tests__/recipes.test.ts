@@ -16,35 +16,50 @@ describe('recipesApi', () => {
     jest.clearAllMocks();
   });
 
-  it('gets all recipes', async () => {
-    const recipes = [
-      {
-        id: '1',
-        title: 'Chicken Pasta',
-        instructions: 'Cook and serve.',
-        ingredients: ['chicken', 'pasta'],
-      },
-    ];
+  it('gets the first page of recipes', async () => {
+    const page = {
+      items: [
+        {
+          id: '1',
+          title: 'Chicken Pasta',
+          instructions: 'Cook and serve.',
+        },
+      ],
+      nextCursor: 'cursor-1',
+      hasMore: true,
+    };
 
-    mockedClient.get.mockResolvedValueOnce({ data: recipes });
+    mockedClient.get.mockResolvedValueOnce({ data: page });
 
     const result = await recipesApi.getRecipes();
 
-    expect(mockedClient.get).toHaveBeenCalledWith('/recipes', { params: undefined });
-    expect(result).toEqual(recipes);
+    expect(mockedClient.get).toHaveBeenCalledWith('/recipes', { params: {} });
+    expect(result).toEqual(page);
   });
 
-  it('filters recipes by meal type', async () => {
-    const recipes = [{ id: '1', title: 'Oatmeal', instructions: 'Cook.', mealType: 'breakfast' }];
+  it('sends mealType, cursor and limit when provided', async () => {
+    const page = { items: [], nextCursor: null, hasMore: false };
+    mockedClient.get.mockResolvedValueOnce({ data: page });
 
-    mockedClient.get.mockResolvedValueOnce({ data: recipes });
-
-    const result = await recipesApi.getRecipes('breakfast');
+    await recipesApi.getRecipes({ mealType: 'breakfast', cursor: 'abc', limit: 10 });
 
     expect(mockedClient.get).toHaveBeenCalledWith('/recipes', {
-      params: { mealType: 'breakfast' },
+      params: { mealType: 'breakfast', cursor: 'abc', limit: 10 },
     });
-    expect(result).toEqual(recipes);
+  });
+
+  it('omits a null cursor rather than sending it', async () => {
+    const page = { items: [], nextCursor: null, hasMore: false };
+    mockedClient.get.mockResolvedValueOnce({ data: page });
+
+    // The hook holds nextCursor as string | null and passes it straight
+    // through on the first page; serialising it would reach the backend as the
+    // literal string "null" and fail cursor decoding with a 400.
+    await recipesApi.getRecipes({ mealType: 'lunch', cursor: null });
+
+    expect(mockedClient.get).toHaveBeenCalledWith('/recipes', {
+      params: { mealType: 'lunch' },
+    });
   });
 
   it('creates a recipe', async () => {

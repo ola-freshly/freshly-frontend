@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -15,6 +15,7 @@ import { mealPlansApi } from '@/api';
 import type { Recipe } from '@/api';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorBar } from '@/components/ErrorBar';
+import { ListFooter } from '@/components/ListFooter';
 import { MealTypeFilter } from '@/components/MealTypeFilter';
 import { tapLight } from '@/utils/haptics';
 
@@ -35,17 +36,17 @@ export default function PickRecipeScreen() {
     setCategory,
     recipes,
     loading,
+    loadingMore,
     error: loadError,
+    hasMore,
+    loadMore,
+    retry,
     reload,
-  } = useCategoryRecipes(slot ?? 'all');
+  } = useCategoryRecipes(slot ?? 'all', search);
 
   const error = attachError ?? loadError;
 
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return recipes;
-    return recipes.filter((r) => r.title.toLowerCase().includes(q));
-  }, [recipes, search]);
+  const searching = search.trim().length > 0;
 
   const attach = async (recipe: Recipe) => {
     if (!slot || !date || attachingId) return;
@@ -108,10 +109,23 @@ export default function PickRecipeScreen() {
         <ActivityIndicator color={ACCENT} style={{ marginTop: 32 }} />
       ) : (
         <FlatList
-          data={visible}
+          data={recipes}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={visible.length === 0 ? styles.emptyWrap : styles.listContent}
+          contentContainerStyle={recipes.length === 0 ? styles.emptyWrap : styles.listContent}
           keyboardShouldPersistTaps="handled"
+          onEndReached={() => {
+            void loadMore();
+          }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            <ListFooter
+              loadingMore={loadingMore}
+              hasMore={hasMore}
+              error={loadError}
+              itemCount={recipes.length}
+              onRetry={retry}
+            />
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
@@ -136,17 +150,21 @@ export default function PickRecipeScreen() {
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            !error ? (
+            error ? null : (
+              // Search runs server-side, so an empty list here means the whole
+              // library has no match — not merely the pages downloaded so far.
               <EmptyState
                 icon="restaurant-outline"
-                title="No recipes here yet"
+                title={searching ? 'No matching recipes' : 'No recipes here yet'}
                 subtitle={
-                  category === 'all'
-                    ? 'Create or generate a recipe to add it to your plan.'
-                    : `No ${category} recipes yet — try another category or generate one.`
+                  searching
+                    ? 'Try a different search term.'
+                    : category === 'all'
+                      ? 'Create or generate a recipe to add it to your plan.'
+                      : `No ${category} recipes yet — try another category or generate one.`
                 }
               />
-            ) : null
+            )
           }
         />
       )}
